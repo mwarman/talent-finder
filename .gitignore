@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+cdk.out/
+
+# Logs
+logs/
+*.log
+
+# Test output
+coverage/
+
+# Environment variables
+.env
+!.env.example
