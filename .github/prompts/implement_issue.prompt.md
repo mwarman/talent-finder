@@ -10,7 +10,7 @@ Implement GitHub Issue #${input:issueNumber:Issue number}.
 **Step 1 — Read & Plan** _(stop here until I respond)_
 
 1. Fetch the issue body, comments, and any linked PRs via the GitHub MCP server.
-2. Read the affected source files to understand existing conventions (naming, structure, error handling, test style). See also `AGENTS.md`.
+2. Read the affected source files to understand existing conventions (naming, structure, error handling, test style).
 3. Identify all changes required: source, tests, docs.
 4. Present a numbered implementation plan.
 5. Flag any ambiguity or architectural decision the ticket doesn't resolve — ask before assuming.
