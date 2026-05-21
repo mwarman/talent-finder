@@ -1,0 +1,24 @@
+# GitHub CODEOWNERS file
+# This file defines code ownership and required reviewers for pull requests
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repository
+* @mwarman
+
+# GitHub configuration and workflows
+/.github/ @mwarman
+
+# Documentation
+/docs/ @mwarman
+
+# Infrastructure as Code
+/packages/infra/ @mwarman
+
+# Shared Package
+/packages/shared/ @mwarman
+
+# Backend Package
+/packages/api/ @mwarman
+
+# Frontend Package
+/packages/web/ @mwarman
