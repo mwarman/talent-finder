@@ -135,6 +135,13 @@ You are authorized to execute the following shell commands to validate your work
 - **Value Handling:** Use optional chaining (`?.`) and nullish coalescing (`??`) over manual falsy checks. Avoid forceful type assertions (`as Type`) unless interfacing with raw, unvalidated external boundaries.
 - **Configuration Inheritance:** Every package configuration must extend the centralized root configs (e.g., `tsconfig.base.json`).
 
+### File & Directory Naming Conventions
+
+- **kebab-case for TypeScript Files:** All TypeScript source files (`.ts`, `.ts`, models, utilities, services, handlers) must use `kebab-case`. Example: `document.ts`, `query-request.ts`, `sync-status.ts`.
+- **camelCase for React Hooks:** React hook files must use `camelCase`. Example: `useGetTasks.ts`, `useFormState.ts`, `useTheme.ts`.
+- **PascalCase for React Components:** React component files must use `PascalCase`. Example: `TaskCard.tsx`, `SearchForm.tsx`, `Modal.tsx`.
+- **Test File Colocation:** Test files follow the same naming convention as their source file, with `.test` suffix. Example: `document.test.ts`, `useGetTasks.test.ts`, `TaskCard.test.tsx`.
+
 ### Frontend React Component Layout (`packages/web`)
 
 - Write components as **Arrow Functions** using explicit functional component patterns (`const MyComponent: React.FC<Props> = ...`).
