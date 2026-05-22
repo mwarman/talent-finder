@@ -4,6 +4,21 @@
   "private": true,
   "type": "module",
   "description": "A RAG AI application to find specific skill matches from a pool of candidates resumes, CVs, and other documents.",
+  "keywords": [
+    "ai",
+    "rag",
+    "aws",
+    "bedrock",
+    "lambda",
+    "react",
+    "typescript"
+  ],
+  "author": "Matthew Warman",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mwarman/talent-finder.git"
+  },
+  "license": "MIT",
   "workspaces": [
     "packages/shared",
     "packages/api",
@@ -13,12 +28,13 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\""
+    "prepare": "husky",
+    "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present"
   },
   "devDependencies": {
     "@types/node": "25.9.1",
@@ -26,6 +42,7 @@
     "@typescript-eslint/parser": "8.59.4",
     "@vitest/coverage-v8": "4.1.7",
     "eslint": "9.39.4",
+    "husky": "9.1.7",
     "prettier": "3.8.3",
     "prettier-plugin-tailwindcss": "0.8.0",
     "rimraf": "6.1.3",
