@@ -11,6 +11,11 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@talent-finder/shared": "*"
+    "@talent-finder/shared": "*",
+    "pino": "10.3.1",
+    "pino-lambda": "4.4.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.161"
   }
 }
