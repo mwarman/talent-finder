@@ -5,6 +5,8 @@ Welcome to the project documentation for the `talent-finder` project. This direc
 ## Table of Contents
 
 - [Project Overview](./PROJECT_OVERVIEW.md): An overview of this project: goals, scope, stacks, and architecture.
+- [Infrastructure Guide](./INFRASTRUCTURE_GUIDE.md): Describes deployment, configuration, and management of the Talent Finder infrastructure using AWS CDK.
+- [DevOps Guide](./DEVOPS_GUIDE.md): Documents the CI/CD workflows for the Talent Finder project.
 
 <br/>
 
