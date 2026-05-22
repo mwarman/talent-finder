@@ -1,4 +1,5 @@
 import { App } from 'aws-cdk-lib';
+
 import { getConfig, getEnvironmentConfig, getTags } from './utils/config.js';
 import { TalentFinderStack } from './stacks/talent-finder-stack.js';
 
@@ -32,10 +33,9 @@ const envConfig = getEnvironmentConfig(config);
 
 // Instantiate the base TalentFinder stack with tags
 new TalentFinderStack(app, 'TalentFinderStack', {
+  stackName: `${config.CDK_APP_NAME}-${config.CDK_ENV_NAME}`,
+  description: `Talent Finder application stack for ${config.CDK_ENV_NAME} environment`,
   tags,
   env: envConfig,
   envName: config.CDK_ENV_NAME,
 });
-
-// Synthesize CloudFormation template
-// app.synth();
