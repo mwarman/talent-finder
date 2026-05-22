@@ -5,7 +5,6 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
 interface TalentFinderStackProps extends StackProps {
-  tags: Record<string, string>;
   envName: string;
 }
 
@@ -43,20 +42,10 @@ export class TalentFinderStack extends Stack {
       ],
     });
 
-    // Apply tags to S3 bucket
-    Object.entries(props.tags).forEach(([key, value]) => {
-      documentBucket.node.addMetadata('tags', { [key]: value });
-    });
-
     // Secrets Manager secret for Pinecone API key
     const pineconeSecret = new Secret(this, 'PineconeApiKeySecret', {
       secretName: `talent-finder/${envName}/pinecone-api-key`,
       secretStringValue: SecretValue.unsafePlainText('placeholder-pinecone-key'),
-    });
-
-    // Apply tags to Secret
-    Object.entries(props.tags).forEach(([key, value]) => {
-      pineconeSecret.node.addMetadata('tags', { [key]: value });
     });
 
     // CloudWatch Log Group for Lambda functions
@@ -64,11 +53,6 @@ export class TalentFinderStack extends Stack {
       logGroupName: `/aws/lambda/talent-finder-${envName}`,
       retention: RetentionDays.ONE_WEEK,
       removalPolicy: RemovalPolicy.DESTROY,
-    });
-
-    // Apply tags to Log Group
-    Object.entries(props.tags).forEach(([key, value]) => {
-      lambdaLogGroup.node.addMetadata('tags', { [key]: value });
     });
 
     // Store values for export
