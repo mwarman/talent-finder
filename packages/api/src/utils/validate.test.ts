@@ -16,7 +16,7 @@ describe('validate', () => {
   });
 
   describe('parseBody', () => {
-    it('should parse and validate a valid request body', async () => {
+    it('should parse and validate a valid request body', () => {
       // Arrange
       const schema = z.object({
         name: z.string(),
@@ -45,13 +45,13 @@ describe('validate', () => {
       } as unknown as APIGatewayProxyEventV2;
 
       // Act
-      const result = await parseBody(schema, event);
+      const result = parseBody(schema, event);
 
       // Assert
       expect(result).toEqual({ name: 'John', age: 30 });
     });
 
-    it('should throw ValidationError on invalid schema', async () => {
+    it('should throw ValidationError on invalid schema', () => {
       // Arrange
       const schema = z.object({
         name: z.string(),
@@ -80,11 +80,11 @@ describe('validate', () => {
       } as unknown as APIGatewayProxyEventV2;
 
       // Act & Assert
-      await expect(parseBody(schema, event)).rejects.toThrow(ValidationError);
+      expect(() => parseBody(schema, event)).toThrow(ValidationError);
       expect(logger.error).toHaveBeenCalled();
     });
 
-    it('should handle empty body', async () => {
+    it('should handle empty body', () => {
       // Arrange
       const schema = z.object({
         name: z.string().optional(),
@@ -111,13 +111,13 @@ describe('validate', () => {
       } as unknown as APIGatewayProxyEventV2;
 
       // Act
-      const result = await parseBody(schema, event);
+      const result = parseBody(schema, event);
 
       // Assert
       expect(result).toEqual({ name: undefined });
     });
 
-    it('should throw ValidationError with errors array', async () => {
+    it('should throw ValidationError with errors array', () => {
       // Arrange
       const schema = z.object({
         name: z.string(),
@@ -147,7 +147,7 @@ describe('validate', () => {
 
       // Act & Assert
       try {
-        await parseBody(schema, event);
+        parseBody(schema, event);
         expect.fail('Should have thrown ValidationError');
       } catch (error) {
         expect(error).toBeInstanceOf(ValidationError);
@@ -157,7 +157,7 @@ describe('validate', () => {
       }
     });
 
-    it('should log error when JSON parse fails', async () => {
+    it('should log error when JSON parse fails', () => {
       // Arrange
       const schema = z.object({
         name: z.string(),
@@ -185,7 +185,7 @@ describe('validate', () => {
       } as unknown as APIGatewayProxyEventV2;
 
       // Act & Assert
-      await expect(parseBody(schema, event)).rejects.toThrow();
+      expect(() => parseBody(schema, event)).toThrow();
       expect(logger.error).toHaveBeenCalled();
     });
   });
