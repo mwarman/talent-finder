@@ -1,12 +1,31 @@
 import pino from 'pino';
+import {
+  CloudwatchLogFormatter,
+  lambdaRequestTracker,
+  pinoLambdaDestination,
+  StructuredLogFormatter,
+} from 'pino-lambda';
 
-const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+import { config } from './config';
 
+/**
+ * Logger singleton instance configured with Pino and Lambda destination
+ * Uses environment variables for log level and format
+ */
 const logger = pino(
   {
-    level: LOG_LEVEL,
+    enabled: config.LOG_ENABLED,
+    level: config.LOG_LEVEL,
   },
-  pino.destination({ sync: false }),
+  pinoLambdaDestination({
+    formatter: config.LOG_FORMAT === 'json' ? new StructuredLogFormatter() : new CloudwatchLogFormatter(),
+  }),
 );
 
-export { logger };
+/**
+ * Middleware to track Lambda requests and add request context to logs
+ * This enhances log entries with request-specific information for better traceability
+ */
+const withRequestTracking = lambdaRequestTracker();
+
+export { logger, withRequestTracking };
