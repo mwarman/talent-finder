@@ -7,11 +7,17 @@
   "scripts": {
     "build": "tsc",
     "cdk": "cdk",
-    "clean": "rimraf coverage dist",
+    "precdk:synth": "npm run build",
+    "cdk:synth": "cdk synth",
+    "clean": "rimraf cdk.out coverage dist",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
   "devDependencies": {
+    "aws-cdk": "2.1124.1",
     "aws-cdk-lib": "2.257.0",
     "constructs": "10.6.0"
   }
