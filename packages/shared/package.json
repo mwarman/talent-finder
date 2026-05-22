@@ -1,0 +1,13 @@
+{
+  "name": "@talent-finder/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf coverage dist",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  }
+}

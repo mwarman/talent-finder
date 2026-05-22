@@ -1,6 +1,6 @@
 ---
-agent: "agent"
-description: "Implement an issue."
+agent: 'agent'
+description: 'Implement an issue.'
 ---
 
 Implement GitHub Issue #${input:issueNumber:Issue number}.

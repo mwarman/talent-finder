@@ -59,29 +59,29 @@ Talent Finder is a full-stack, AI-powered application that ingests a corpus of r
 
 ## Target Audience
 
-| Audience | Signal Being Demonstrated |
-|---|---|
-| Enterprise IT / HR tech clients | Production-pattern RAG pipeline design on AWS; informed vendor selection (right tool for the job over AWS-native-at-all-costs) |
-| Technical recruiters / hiring managers | Deep AWS Bedrock + CDK fluency; full-stack TypeScript at architectural scale |
-| Peer architects | Hierarchical chunking strategy; Retrieve-then-Generate prompt architecture; cost-optimized vector store selection |
+| Audience                               | Signal Being Demonstrated                                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Enterprise IT / HR tech clients        | Production-pattern RAG pipeline design on AWS; informed vendor selection (right tool for the job over AWS-native-at-all-costs) |
+| Technical recruiters / hiring managers | Deep AWS Bedrock + CDK fluency; full-stack TypeScript at architectural scale                                                   |
+| Peer architects                        | Hierarchical chunking strategy; Retrieve-then-Generate prompt architecture; cost-optimized vector store selection              |
 
 ---
 
 ## Technology Stack
 
-| Layer | Technology / Service | Rationale |
-|---|---|---|
-| Frontend | React 19, Vite, React Router, TanStack Query, shadcn/ui, TailwindCSS, Lucide | Consistent with established project stack; component library accelerates UI |
-| API | AWS Lambda (Node.js/TypeScript) + API Gateway (HTTP API) | Serverless; consistent with prior projects; minimal ops overhead |
-| Document Store | Amazon S3 | Native Bedrock KB data source; durable, cost-effective, event-driven sync |
-| Knowledge Base | Amazon Bedrock Knowledge Bases | Managed RAG pipeline: hierarchical chunking, embedding orchestration, sync |
-| Embedding Model | Amazon Titan Embeddings v2 | Native Bedrock; 8K token window suits resume-length chunks; cost-effective |
-| Vector Store | Pinecone Serverless | ~$0–5/mo at demo scale (free tier likely sufficient); true scale-to-zero; no cold start; native Bedrock KB support |
-| LLM Inference | Amazon Bedrock — Claude Sonnet 4.6 (`claude-sonnet-4-6`) | Latest Sonnet model on Bedrock; highest quality for seniority inference; configurable via `BEDROCK_MODEL_ID` env var |
-| Infrastructure | AWS CDK (TypeScript) | Consistent with established project stack; full IaC |
-| Secrets | AWS Secrets Manager | Stores Pinecone API key; **required by Bedrock KB** for external vector store authentication; not substitutable with SSM Parameter Store |
-| Observability | AWS CloudWatch + structured logging (Pino in Lambda) | Native AWS; zero additional tooling cost |
-| CI/CD | GitHub Actions (manual deploy gate via workflow dispatch) | Consistent with prior projects; intentional deploy control |
+| Layer           | Technology / Service                                                         | Rationale                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend        | React 19, Vite, React Router, TanStack Query, shadcn/ui, TailwindCSS, Lucide | Consistent with established project stack; component library accelerates UI                                                              |
+| API             | AWS Lambda (Node.js/TypeScript) + API Gateway (HTTP API)                     | Serverless; consistent with prior projects; minimal ops overhead                                                                         |
+| Document Store  | Amazon S3                                                                    | Native Bedrock KB data source; durable, cost-effective, event-driven sync                                                                |
+| Knowledge Base  | Amazon Bedrock Knowledge Bases                                               | Managed RAG pipeline: hierarchical chunking, embedding orchestration, sync                                                               |
+| Embedding Model | Amazon Titan Embeddings v2                                                   | Native Bedrock; 8K token window suits resume-length chunks; cost-effective                                                               |
+| Vector Store    | Pinecone Serverless                                                          | ~$0–5/mo at demo scale (free tier likely sufficient); true scale-to-zero; no cold start; native Bedrock KB support                       |
+| LLM Inference   | Amazon Bedrock — Claude Sonnet 4.6 (`claude-sonnet-4-6`)                     | Latest Sonnet model on Bedrock; highest quality for seniority inference; configurable via `BEDROCK_MODEL_ID` env var                     |
+| Infrastructure  | AWS CDK (TypeScript)                                                         | Consistent with established project stack; full IaC                                                                                      |
+| Secrets         | AWS Secrets Manager                                                          | Stores Pinecone API key; **required by Bedrock KB** for external vector store authentication; not substitutable with SSM Parameter Store |
+| Observability   | AWS CloudWatch + structured logging (Pino in Lambda)                         | Native AWS; zero additional tooling cost                                                                                                 |
+| CI/CD           | GitHub Actions (manual deploy gate via workflow dispatch)                    | Consistent with prior projects; intentional deploy control                                                                               |
 
 ---
 
@@ -152,11 +152,11 @@ graph TD
 
 ### Decision: Vector Store — Pinecone Serverless vs. Aurora pgvector vs. OpenSearch Serverless
 
-| Option | Monthly Cost (Demo Scale) | Idle Cost | Cold Start | Setup Complexity | Bedrock KB Support |
-|---|---|---|---|---|---|
-| Pinecone Serverless | ~$0–5 (free tier likely sufficient) | $0 | None | Low (index + API key in Secrets Manager) | Native |
-| Aurora PostgreSQL Serverless v2 + pgvector | ~$50–65 | ~$42/mo minimum | 5–40s (scale-to-zero) | High (VPC, RDS, Lambda VPC placement) | Native |
-| Amazon OpenSearch Serverless | ~$700 | ~$700/mo | None | Low (fully managed) | Native (default) |
+| Option                                     | Monthly Cost (Demo Scale)           | Idle Cost       | Cold Start            | Setup Complexity                         | Bedrock KB Support |
+| ------------------------------------------ | ----------------------------------- | --------------- | --------------------- | ---------------------------------------- | ------------------ |
+| Pinecone Serverless                        | ~$0–5 (free tier likely sufficient) | $0              | None                  | Low (index + API key in Secrets Manager) | Native             |
+| Aurora PostgreSQL Serverless v2 + pgvector | ~$50–65                             | ~$42/mo minimum | 5–40s (scale-to-zero) | High (VPC, RDS, Lambda VPC placement)    | Native             |
+| Amazon OpenSearch Serverless               | ~$700                               | ~$700/mo        | None                  | Low (fully managed)                      | Native (default)   |
 
 **Decision:** Pinecone Serverless
 
@@ -166,10 +166,10 @@ graph TD
 
 ### Decision: Secrets Manager vs. SSM Parameter Store for Pinecone API Key
 
-| Option | Cost | Bedrock KB Compatible | Notes |
-|---|---|---|---|
-| AWS Secrets Manager | ~$0.40/mo + negligible API call cost | **Yes — required** | `credentialsSecretArn` is a required field in the Bedrock KB `PineconeConfiguration` API |
-| SSM Parameter Store | ~$0.05/mo (Standard tier free; Advanced $0.05/param) | **No** | Bedrock KB does not accept SSM ARNs for vector store credentials |
+| Option              | Cost                                                 | Bedrock KB Compatible | Notes                                                                                    |
+| ------------------- | ---------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| AWS Secrets Manager | ~$0.40/mo + negligible API call cost                 | **Yes — required**    | `credentialsSecretArn` is a required field in the Bedrock KB `PineconeConfiguration` API |
+| SSM Parameter Store | ~$0.05/mo (Standard tier free; Advanced $0.05/param) | **No**                | Bedrock KB does not accept SSM ARNs for vector store credentials                         |
 
 **Decision:** AWS Secrets Manager
 
@@ -179,11 +179,11 @@ graph TD
 
 ### Decision: Chunking Strategy — Hierarchical vs. Fixed-Size vs. Semantic
 
-| Option | Retrieval Precision | Context for Inference | Resume Fit |
-|---|---|---|---|
-| Hierarchical | High — child chunks for precise match | High — parent chunks returned for full context | Best — handles heterogeneous resume structure |
-| Fixed-size with overlap | Medium — may split mid-section | Medium — overlap helps but incomplete | Acceptable starting point |
-| Semantic | Medium — good for narrative flow | Medium | Weak — resume sections are already short and structurally distinct |
+| Option                  | Retrieval Precision                   | Context for Inference                          | Resume Fit                                                         |
+| ----------------------- | ------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
+| Hierarchical            | High — child chunks for precise match | High — parent chunks returned for full context | Best — handles heterogeneous resume structure                      |
+| Fixed-size with overlap | Medium — may split mid-section        | Medium — overlap helps but incomplete          | Acceptable starting point                                          |
+| Semantic                | Medium — good for narrative flow      | Medium                                         | Weak — resume sections are already short and structurally distinct |
 
 **Decision:** Hierarchical chunking
 
@@ -193,10 +193,10 @@ graph TD
 
 ### Decision: Retrieval API Pattern — Retrieve-then-Generate vs. RetrieveAndGenerate
 
-| Option | Prompt Control | Complexity | Seniority Inference Quality |
-|---|---|---|---|
-| Retrieve-then-Generate (two calls) | Full — custom system prompt, reasoning instructions, output format | Medium | High — explicit reasoning chain injectable |
-| RetrieveAndGenerate (single call) | Low — limited system prompt customization | Low | Medium — inference instructions cannot be reliably injected |
+| Option                             | Prompt Control                                                     | Complexity | Seniority Inference Quality                                 |
+| ---------------------------------- | ------------------------------------------------------------------ | ---------- | ----------------------------------------------------------- |
+| Retrieve-then-Generate (two calls) | Full — custom system prompt, reasoning instructions, output format | Medium     | High — explicit reasoning chain injectable                  |
+| RetrieveAndGenerate (single call)  | Low — limited system prompt customization                          | Low        | Medium — inference instructions cannot be reliably injected |
 
 **Decision:** Retrieve-then-Generate
 
@@ -206,10 +206,10 @@ graph TD
 
 ### Decision: Document Formats — PDF + TXT Only
 
-| Option | Formats Supported | Complexity | Notes |
-|---|---|---|---|
-| PDF + TXT only | PDF, TXT | Low | Consistent with resume-lens; Bedrock KB handles both natively |
-| PDF + TXT + DOCX | PDF, TXT, DOCX | Medium | DOCX requires text extraction preprocessing; adds ingestion complexity |
+| Option           | Formats Supported | Complexity | Notes                                                                  |
+| ---------------- | ----------------- | ---------- | ---------------------------------------------------------------------- |
+| PDF + TXT only   | PDF, TXT          | Low        | Consistent with resume-lens; Bedrock KB handles both natively          |
+| PDF + TXT + DOCX | PDF, TXT, DOCX    | Medium     | DOCX requires text extraction preprocessing; adds ingestion complexity |
 
 **Decision:** PDF and TXT only
 
@@ -238,13 +238,13 @@ graph TD
 
 ## Risks & Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Pinecone free tier limits (index count, storage) are hit during testing | Low | Low | Free tier supports 2GB storage and 1 index — sufficient for demo corpus; Serverless tier is <$5/mo if exceeded |
-| Bedrock KB hierarchical chunking produces poor retrieval quality for short resumes | Medium | High | Test with sample corpus early in M1; define retrieval quality acceptance criteria before M2 |
-| Seniority inference is unreliable for resumes with missing date ranges | High | Medium | Explicit prompt instructions to express uncertainty; UI copy sets user expectations |
-| Pinecone API key rotation requires Secrets Manager update and KB re-configuration | Low | Low | Document rotation procedure in runbook; CDK manages Secrets Manager resource |
-| Pre-signed S3 upload bypasses Lambda size limits but requires CORS configuration | Low | Low | Configure S3 CORS policy in CDK; test with PDF and TXT file types early |
+| Risk                                                                               | Likelihood | Impact | Mitigation                                                                                                     |
+| ---------------------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| Pinecone free tier limits (index count, storage) are hit during testing            | Low        | Low    | Free tier supports 2GB storage and 1 index — sufficient for demo corpus; Serverless tier is <$5/mo if exceeded |
+| Bedrock KB hierarchical chunking produces poor retrieval quality for short resumes | Medium     | High   | Test with sample corpus early in M1; define retrieval quality acceptance criteria before M2                    |
+| Seniority inference is unreliable for resumes with missing date ranges             | High       | Medium | Explicit prompt instructions to express uncertainty; UI copy sets user expectations                            |
+| Pinecone API key rotation requires Secrets Manager update and KB re-configuration  | Low        | Low    | Document rotation procedure in runbook; CDK manages Secrets Manager resource                                   |
+| Pre-signed S3 upload bypasses Lambda size limits but requires CORS configuration   | Low        | Low    | Configure S3 CORS policy in CDK; test with PDF and TXT file types early                                        |
 
 ---
 
@@ -256,9 +256,9 @@ graph TD
 
 ## Revision History
 
-| Version | Date | Changes |
-|---|---|---|
-| Draft 1 | 2026-05-20 | Initial brainstorming draft |
-| Draft 2 | 2026-05-20 | Full elaboration: all sections populated; vector store (Aurora pgvector); model selection (Titan v2 + configurable Claude); chunking strategy (hierarchical); retrieval pattern (Retrieve-then-Generate); CI/CD and environment topology confirmed |
-| Draft 3 | 2026-05-21 | Vector store updated from Aurora pgvector to Pinecone Serverless; VPC/RDS removed from scope; budget revised to <$10/mo |
+| Version | Date       | Changes                                                                                                                                                                                                                                                                                                                                                                          |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Draft 1 | 2026-05-20 | Initial brainstorming draft                                                                                                                                                                                                                                                                                                                                                      |
+| Draft 2 | 2026-05-20 | Full elaboration: all sections populated; vector store (Aurora pgvector); model selection (Titan v2 + configurable Claude); chunking strategy (hierarchical); retrieval pattern (Retrieve-then-Generate); CI/CD and environment topology confirmed                                                                                                                               |
+| Draft 3 | 2026-05-21 | Vector store updated from Aurora pgvector to Pinecone Serverless; VPC/RDS removed from scope; budget revised to <$10/mo                                                                                                                                                                                                                                                          |
 | Draft 4 | 2026-05-21 | Generation model pinned to Claude Sonnet 4.6 (`claude-sonnet-4-6`); document formats restricted to PDF and TXT only (DOCX moved to Out of Scope); Secrets Manager confirmed as mandatory for Pinecone API key (Bedrock KB API constraint; SSM not substitutable); new Key Design Decision added for each change; Secrets Manager note added to Technology Stack and Out of Scope |
