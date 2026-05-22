@@ -5,14 +5,13 @@ export default [
   {
     ignores: [
       'node_modules/**',
-      'dist/**',
-      'build/**',
-      '.next/**',
-      'coverage/**',
-      '**/*.test.ts',
-      '**/*.test.tsx',
+      '**/dist/**',
+      '**/build/**',
+      '**/coverage/**',
+      '**/cdk.out/**',
       'package-lock.json',
       '.github/**',
+      '**/shadcn/*.tsx',
     ],
   },
   {

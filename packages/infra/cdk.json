@@ -1,0 +1,8 @@
+{
+  "app": "node dist/app.js",
+  "context": {},
+  "versionReporting": true,
+  "pathMetadata": true,
+  "assetMetadata": true,
+  "requireApproval": "never"
+}
