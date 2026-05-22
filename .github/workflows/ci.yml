@@ -34,6 +34,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Create infrastructure .env file
+        working-directory: ./packages/infra
+        run: |
+          echo "${{ vars.CDK_ENV }}" > .env
+
       - name: Build
         run: npm run build
 
