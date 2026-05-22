@@ -8,10 +8,6 @@ import {
 } from '@talent-finder/shared';
 
 describe('api package', () => {
-  it('should pass placeholder test', () => {
-    expect(1 + 1).toBe(2);
-  });
-
   it('should import shared schemas successfully', () => {
     // Arrange & Act & Assert
     expect(DocumentSchema).toBeDefined();
