@@ -29,7 +29,8 @@ export class TalentFinderStack extends Stack {
     const documentBucket = new Bucket(this, 'DocumentBucket', {
       versioned: true,
       encryption: BucketEncryption.S3_MANAGED,
-      removalPolicy: RemovalPolicy.RETAIN,
+      removalPolicy: envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      autoDeleteObjects: envName !== 'prod',
       lifecycleRules: [
         {
           transitions: [
@@ -52,7 +53,7 @@ export class TalentFinderStack extends Stack {
     const lambdaLogGroup = new LogGroup(this, 'LambdaLogGroup', {
       logGroupName: `/aws/lambda/talent-finder-${envName}`,
       retention: RetentionDays.ONE_WEEK,
-      removalPolicy: RemovalPolicy.DESTROY,
+      removalPolicy: envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
 
     // Store values for export
