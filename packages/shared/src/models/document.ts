@@ -7,15 +7,6 @@ export enum SyncStatus {
   FAILED = 'FAILED',
 }
 
-export interface Document {
-  documentId: string;
-  filename: string;
-  uploadedAt: string; // ISO 8601 string
-  contentType: 'application/pdf' | 'text/plain';
-  sizeBytes: number;
-  syncStatus: SyncStatus;
-}
-
 export const SyncStatusSchema = z.enum([
   SyncStatus.PENDING,
   SyncStatus.IN_PROGRESS,
@@ -26,8 +17,10 @@ export const SyncStatusSchema = z.enum([
 export const DocumentSchema = z.object({
   documentId: z.string().min(1),
   filename: z.string().min(1),
-  uploadedAt: z.string().datetime(),
+  uploadedAt: z.iso.datetime(),
   contentType: z.enum(['application/pdf', 'text/plain']),
   sizeBytes: z.number().int().nonnegative(),
   syncStatus: SyncStatusSchema,
 });
+
+export type Document = z.infer<typeof DocumentSchema>;
