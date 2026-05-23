@@ -21,6 +21,15 @@ const ConfigSchema = z.object({
     .string()
     .default('unknown')
     .describe('CDK_RESOURCE_OWNER - Team or person responsible for resources'),
+  CDK_LOG_LEVEL: z
+    .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
+    .default('info')
+    .describe('CDK_LOG_LEVEL - Lambda logging level (default: "info")'),
+  CDK_LOG_FORMAT: z
+    .enum(['json', 'text'])
+    .default('json')
+    .describe('CDK_LOG_FORMAT - Lambda logging format (default: "json")'),
+  CDK_LOG_ENABLED: z.string().default('true').describe('CDK_LOG_ENABLED - Enable Lambda logging (default: "true")'),
 });
 
 /**

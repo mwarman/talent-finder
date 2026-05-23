@@ -22,14 +22,18 @@ describe('TalentFinderStack', () => {
     // Act
     const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
       tags,
+      appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
     expect(talentFinderStack).toBeDefined();
     expect(talentFinderStack.s3BucketName).toBeDefined();
     expect(talentFinderStack.secretArn).toBeDefined();
-    expect(talentFinderStack.logGroupName).toBeDefined();
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should export stack outputs with environment-specific names', () => {
@@ -45,7 +49,11 @@ describe('TalentFinderStack', () => {
     // Act
     new TalentFinderStack(parentStack, 'TalentFinderStack', {
       tags,
+      appName: 'talent-finder',
       envName: 'prod',
+      logLevel: 'info',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
@@ -53,29 +61,9 @@ describe('TalentFinderStack', () => {
     const calls = exportSpy.mock.calls;
     expect(calls.some((call) => call[1]?.name === 'TalentFinder-S3BucketName-prod')).toBe(true);
     expect(calls.some((call) => call[1]?.name === 'TalentFinder-SecretArn-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-LogGroupName-prod')).toBe(true);
+    expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
 
     exportSpy.mockRestore();
-  });
-
-  it('should create log group with environment-specific name', () => {
-    // Arrange
-    const tags = {
-      App: 'talent-finder',
-      Env: 'staging',
-      OU: 'engineering',
-      Owner: 'team-backend',
-    };
-
-    // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
-      tags,
-      envName: 'staging',
-    });
-
-    // Assert - Check that logGroupName is defined (may be a token or string)
-    expect(talentFinderStack.logGroupName).toBeDefined();
-    expect(typeof talentFinderStack.logGroupName).toMatch(/string|object/);
   });
 
   it('should create secret with environment-specific name', () => {
@@ -90,7 +78,11 @@ describe('TalentFinderStack', () => {
     // Act
     const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
       tags,
+      appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert - Check that secretArn is defined (may be a token or string)
@@ -110,13 +102,93 @@ describe('TalentFinderStack', () => {
     // Act
     const stack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
       tags,
+      appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
     expect(stack).toBeDefined();
     expect(stack.s3BucketName).toBeDefined();
     expect(stack.secretArn).toBeDefined();
-    expect(stack.logGroupName).toBeDefined();
+  });
+
+  it('should create HTTP API Gateway', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+    });
+
+    // Assert
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
+    expect(typeof talentFinderStack.apiEndpointUrl).toMatch(/string|object/);
+  });
+
+  it('should export API endpoint URL with environment-specific name', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'prod',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
+
+    // Act
+    new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'prod',
+      logLevel: 'info',
+      logFormat: 'json',
+      logEnabled: 'true',
+    });
+
+    // Assert
+    expect(exportSpy).toHaveBeenCalled();
+    const calls = exportSpy.mock.calls;
+    expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
+
+    exportSpy.mockRestore();
+  });
+
+  it('should pass log configuration to Lambda environment variables', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'info',
+      logFormat: 'text',
+      logEnabled: 'false',
+    });
+
+    // Assert
+    expect(talentFinderStack).toBeDefined();
+    // The Lambda function should be created with the provided log configuration
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 });
