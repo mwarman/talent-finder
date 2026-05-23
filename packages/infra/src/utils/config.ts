@@ -30,6 +30,12 @@ const ConfigSchema = z.object({
     .default('json')
     .describe('CDK_LOG_FORMAT - Lambda logging format (default: "json")'),
   CDK_LOG_ENABLED: z.string().default('true').describe('CDK_LOG_ENABLED - Enable Lambda logging (default: "true")'),
+  CDK_CLOUDFRONT_URL: z
+    .string()
+    .default('*')
+    .describe(
+      'CDK_CLOUDFRONT_URL - CloudFront distribution URL used as the allowed origin for S3 CORS policy (default: "*")',
+    ),
 });
 
 /**

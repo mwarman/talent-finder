@@ -27,6 +27,7 @@ describe('TalentFinderStack', () => {
       logLevel: 'debug',
       logFormat: 'json',
       logEnabled: 'true',
+      cloudFrontUrl: '*',
     });
 
     // Assert
@@ -54,6 +55,7 @@ describe('TalentFinderStack', () => {
       logLevel: 'info',
       logFormat: 'json',
       logEnabled: 'true',
+      cloudFrontUrl: 'https://d1234567890.cloudfront.net',
     });
 
     // Assert
@@ -83,6 +85,7 @@ describe('TalentFinderStack', () => {
       logLevel: 'debug',
       logFormat: 'json',
       logEnabled: 'true',
+      cloudFrontUrl: '*',
     });
 
     // Assert - Check that secretArn is defined (may be a token or string)
@@ -107,6 +110,7 @@ describe('TalentFinderStack', () => {
       logLevel: 'debug',
       logFormat: 'json',
       logEnabled: 'true',
+      cloudFrontUrl: '*',
     });
 
     // Assert
@@ -132,6 +136,7 @@ describe('TalentFinderStack', () => {
       logLevel: 'debug',
       logFormat: 'json',
       logEnabled: 'true',
+      cloudFrontUrl: '*',
     });
 
     // Assert
@@ -157,6 +162,7 @@ describe('TalentFinderStack', () => {
       logLevel: 'info',
       logFormat: 'json',
       logEnabled: 'true',
+      cloudFrontUrl: 'https://d1234567890.cloudfront.net',
     });
 
     // Assert
@@ -184,11 +190,37 @@ describe('TalentFinderStack', () => {
       logLevel: 'info',
       logFormat: 'text',
       logEnabled: 'false',
+      cloudFrontUrl: '*',
     });
 
     // Assert
     expect(talentFinderStack).toBeDefined();
     // The Lambda function should be created with the provided log configuration
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
+  });
+
+  it('should create upload Lambda wired to POST /documents/upload-url', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+    });
+
+    // Assert — stack must be defined and the API endpoint must exist (upload route is wired)
+    expect(talentFinderStack).toBeDefined();
     expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 });

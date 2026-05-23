@@ -42,4 +42,5 @@ new TalentFinderStack(app, 'TalentFinderStack', {
   logLevel: config.CDK_LOG_LEVEL,
   logFormat: config.CDK_LOG_FORMAT,
   logEnabled: config.CDK_LOG_ENABLED,
+  cloudFrontUrl: config.CDK_CLOUDFRONT_URL,
 });
