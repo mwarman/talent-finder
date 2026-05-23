@@ -36,6 +36,18 @@ const ConfigSchema = z.object({
     .describe(
       'CDK_CLOUDFRONT_URL - CloudFront distribution URL used as the allowed origin for S3 CORS policy (default: "*")',
     ),
+  CDK_PINECONE_INDEX_HOST: z
+    .string()
+    .min(1)
+    .describe(
+      'CDK_PINECONE_INDEX_HOST - Pinecone Serverless index host URL (e.g., "https://index-name-xxx-yyy.svc.pinecone.io"). Obtained after manually creating the Pinecone index.',
+    ),
+  CDK_PINECONE_API_KEY: z
+    .string()
+    .min(1)
+    .describe(
+      'CDK_PINECONE_API_KEY - Pinecone API key. Stored in Secrets Manager at deploy time so Bedrock can authenticate to the Pinecone vector store during Knowledge Base provisioning.',
+    ),
 });
 
 /**

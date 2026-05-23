@@ -5,7 +5,12 @@ describe('config', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    process.env = { ...originalEnv };
+    process.env = {
+      ...originalEnv,
+      // Required fields; seed defaults so all tests pass unless overridden
+      CDK_PINECONE_INDEX_HOST: 'https://test-index.svc.pinecone.io',
+      CDK_PINECONE_API_KEY: 'test-pinecone-api-key',
+    };
   });
 
   afterEach(() => {
@@ -222,6 +227,66 @@ describe('config', () => {
 
       // Assert
       expect(config.CDK_CLOUDFRONT_URL).toBe('https://d1234567890.cloudfront.net');
+    });
+
+    it('should accept CDK_PINECONE_INDEX_HOST when set', () => {
+      // Arrange
+      process.env.CDK_PINECONE_INDEX_HOST = 'https://my-index-abc123.svc.pinecone.io';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_PINECONE_INDEX_HOST).toBe('https://my-index-abc123.svc.pinecone.io');
+    });
+
+    it('should throw when CDK_PINECONE_INDEX_HOST is missing', () => {
+      // Arrange
+      delete process.env.CDK_PINECONE_INDEX_HOST;
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act & Assert
+      expect(() => getConfig()).toThrow();
+    });
+
+    it('should throw when CDK_PINECONE_INDEX_HOST is an empty string', () => {
+      // Arrange
+      process.env.CDK_PINECONE_INDEX_HOST = '';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act & Assert
+      expect(() => getConfig()).toThrow();
+    });
+
+    it('should accept CDK_PINECONE_API_KEY when set', () => {
+      // Arrange
+      process.env.CDK_PINECONE_API_KEY = 'pcsk_abc123xyz';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_PINECONE_API_KEY).toBe('pcsk_abc123xyz');
+    });
+
+    it('should throw when CDK_PINECONE_API_KEY is missing', () => {
+      // Arrange
+      delete process.env.CDK_PINECONE_API_KEY;
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act & Assert
+      expect(() => getConfig()).toThrow();
+    });
+
+    it('should throw when CDK_PINECONE_API_KEY is an empty string', () => {
+      // Arrange
+      process.env.CDK_PINECONE_API_KEY = '';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act & Assert
+      expect(() => getConfig()).toThrow();
     });
   });
 

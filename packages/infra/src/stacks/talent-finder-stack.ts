@@ -9,6 +9,8 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { ApplicationLogLevel, LoggingFormat, Runtime, SystemLogLevel } from 'aws-cdk-lib/aws-lambda';
 import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
+import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { CfnDataSource, CfnKnowledgeBase } from 'aws-cdk-lib/aws-bedrock';
 import { Construct } from 'constructs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -20,6 +22,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * - logLevel: Lambda logging level
  * - logFormat: Lambda logging format
  * - logEnabled: Enable Lambda logging
+ * - pineconeIndexHost: Pinecone Serverless index host URL for the Bedrock Knowledge Base
+ * - pineconeApiKey: Pinecone API key written into Secrets Manager at deploy time
  */
 interface TalentFinderStackProps extends StackProps {
   appName: string;
@@ -28,6 +32,8 @@ interface TalentFinderStackProps extends StackProps {
   logFormat: string;
   logEnabled: string;
   cloudFrontUrl: string;
+  pineconeIndexHost: string;
+  pineconeApiKey: string;
 }
 
 /**
@@ -45,6 +51,8 @@ export class TalentFinderStack extends Stack {
   public readonly s3BucketName: string;
   public readonly secretArn: string;
   public readonly apiEndpointUrl: string;
+  public readonly knowledgeBaseId: string;
+  public readonly dataSourceId: string;
 
   constructor(scope: Construct, id: string, props: TalentFinderStackProps) {
     super(scope, id, props);
@@ -90,9 +98,12 @@ export class TalentFinderStack extends Stack {
     });
 
     // Secrets Manager secret for Pinecone API key
+    // The value is written at deploy time from CDK_PINECONE_API_KEY so Bedrock can
+    // authenticate to the Pinecone vector store during Knowledge Base provisioning.
     const pineconeSecret = new Secret(this, 'PineconeApiKeySecret', {
       secretName: `${props.appName}/${props.envName}/pinecone-api-key`,
-      secretStringValue: SecretValue.unsafePlainText('placeholder-pinecone-key'),
+      // Bedrock requires the secret to be a JSON object with an "apiKey" key.
+      secretStringValue: SecretValue.unsafePlainText(JSON.stringify({ apiKey: props.pineconeApiKey })),
     });
 
     // HTTP API Gateway
@@ -186,9 +197,118 @@ export class TalentFinderStack extends Stack {
     this.secretArn = pineconeSecret.secretArn;
     this.apiEndpointUrl = httpApi.url || '';
 
+    // --- Bedrock Knowledge Base ---
+
+    // IAM execution role assumed by the Bedrock service to read documents and access the vector store
+    const knowledgeBaseRole = new Role(this, 'KnowledgeBaseRole', {
+      roleName: `${props.appName}-kb-role-${props.envName}`,
+      assumedBy: new ServicePrincipal('bedrock.amazonaws.com'),
+    });
+
+    // s3:GetObject — scoped to the documents/ prefix in the corpus bucket
+    knowledgeBaseRole.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['s3:GetObject'],
+        resources: [`${documentBucket.bucketArn}/documents/*`],
+      }),
+    );
+
+    // s3:ListBucket — scoped to the corpus bucket (required for prefix scanning)
+    knowledgeBaseRole.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['s3:ListBucket'],
+        resources: [documentBucket.bucketArn],
+      }),
+    );
+
+    // secretsmanager:GetSecretValue — scoped to the Pinecone API key secret
+    knowledgeBaseRole.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [pineconeSecret.secretArn],
+      }),
+    );
+
+    // bedrock:InvokeModel — required for the Bedrock service to call Amazon Titan Embeddings v2
+    knowledgeBaseRole.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:InvokeModel'],
+        resources: [`arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`],
+      }),
+    );
+
+    // Bedrock Knowledge Base — Amazon Titan Embeddings v2 + Pinecone Serverless vector store
+    const knowledgeBase = new CfnKnowledgeBase(this, 'KnowledgeBase', {
+      name: `${props.appName}-kb-${props.envName}`,
+      roleArn: knowledgeBaseRole.roleArn,
+      knowledgeBaseConfiguration: {
+        type: 'VECTOR',
+        vectorKnowledgeBaseConfiguration: {
+          // Amazon Titan Embeddings v2 produces 1536-dimensional vectors
+          embeddingModelArn: `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+        },
+      },
+      storageConfiguration: {
+        type: 'PINECONE',
+        pineconeConfiguration: {
+          connectionString: props.pineconeIndexHost,
+          credentialsSecretArn: pineconeSecret.secretArn,
+          fieldMapping: {
+            metadataField: 'metadata',
+            textField: 'text',
+          },
+        },
+      },
+    });
+
+    // Ensure the KB resource waits for the role's inline policy to be fully attached before
+    // CloudFormation attempts to create it. Without this, Bedrock validates the role permissions
+    // immediately on KB creation and may find the policy not yet propagated (IAM eventual
+    // consistency), causing an "not authorized to perform: secretsmanager:GetSecretValue" error.
+    knowledgeBase.node.addDependency(knowledgeBaseRole);
+
+    // S3 data source wired to the documents/ prefix with hierarchical chunking
+    // Tunable chunking parameters:
+    //   - Parent chunk max tokens: 1500 (broad context window)
+    //   - Child chunk max tokens:   300 (fine-grained retrieval unit)
+    //   - Overlap tokens:            60 (continuity across chunk boundaries)
+    const knowledgeBaseDataSource = new CfnDataSource(this, 'KnowledgeBaseDataSource', {
+      knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
+      name: `${props.appName}-documents-${props.envName}`,
+      dataSourceConfiguration: {
+        type: 'S3',
+        s3Configuration: {
+          bucketArn: documentBucket.bucketArn,
+          inclusionPrefixes: ['documents/'],
+        },
+      },
+      vectorIngestionConfiguration: {
+        chunkingConfiguration: {
+          chunkingStrategy: 'HIERARCHICAL',
+          hierarchicalChunkingConfiguration: {
+            levelConfigurations: [
+              { maxTokens: 1500 }, // parent chunk
+              { maxTokens: 300 }, //  child chunk
+            ],
+            overlapTokens: 60,
+          },
+        },
+      },
+    });
+
+    // Store KB values for export
+    this.knowledgeBaseId = knowledgeBase.attrKnowledgeBaseId;
+    this.dataSourceId = knowledgeBaseDataSource.attrDataSourceId;
+
     // Stack outputs for consumption by feature stacks and end users
     this.exportValue(this.s3BucketName, { name: `TalentFinder-S3BucketName-${props.envName}` });
     this.exportValue(this.secretArn, { name: `TalentFinder-SecretArn-${props.envName}` });
     this.exportValue(this.apiEndpointUrl, { name: `TalentFinder-ApiEndpoint-${props.envName}` });
+    this.exportValue(this.knowledgeBaseId, { name: `TalentFinder-KnowledgeBaseId-${props.envName}` });
+    this.exportValue(this.dataSourceId, { name: `TalentFinder-DataSourceId-${props.envName}` });
   }
 }

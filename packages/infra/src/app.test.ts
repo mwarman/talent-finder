@@ -5,7 +5,12 @@ describe('app', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    process.env = { ...originalEnv };
+    process.env = {
+      ...originalEnv,
+      // Required fields; seed defaults so all tests pass unless overridden
+      CDK_PINECONE_INDEX_HOST: 'https://test-index.svc.pinecone.io',
+      CDK_PINECONE_API_KEY: 'test-pinecone-api-key',
+    };
   });
 
   afterEach(() => {
