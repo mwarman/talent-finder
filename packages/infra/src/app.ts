@@ -43,4 +43,6 @@ new TalentFinderStack(app, 'TalentFinderStack', {
   logFormat: config.CDK_LOG_FORMAT,
   logEnabled: config.CDK_LOG_ENABLED,
   cloudFrontUrl: config.CDK_CLOUDFRONT_URL,
+  pineconeIndexHost: config.CDK_PINECONE_INDEX_HOST,
+  pineconeApiKey: config.CDK_PINECONE_API_KEY,
 });
