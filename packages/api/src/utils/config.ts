@@ -21,6 +21,10 @@ const ConfigSchema = z.object({
     .string()
     .min(1)
     .describe('DOCUMENTS_BUCKET_NAME - S3 bucket name for document storage (required)'),
+  DOCUMENTS_TABLE_NAME: z
+    .string()
+    .min(1)
+    .describe('DOCUMENTS_TABLE_NAME - DynamoDB table name for document metadata (required)'),
 });
 
 /**
