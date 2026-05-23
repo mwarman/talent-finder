@@ -12,9 +12,17 @@ vi.mock('../utils/s3-client', () => ({
   s3Client: {},
 }));
 
+vi.mock('../repositories/document-repository', () => ({
+  DocumentRepository: {
+    create: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { UploadService } from './upload-service';
+import { Document } from '@talent-finder/shared';
+import { DocumentRepository } from '../repositories/document-repository';
 
 describe('upload-service', () => {
   beforeEach(() => {
@@ -24,7 +32,10 @@ describe('upload-service', () => {
   describe('createDocumentPresignedUrl', () => {
     it('should return a documentId and uploadUrl for a PDF file', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       const result = await UploadService.createDocumentPresignedUrl(params);
@@ -37,7 +48,7 @@ describe('upload-service', () => {
 
     it('should return a documentId and uploadUrl for a TXT file', async () => {
       // Arrange
-      const params = { filename: 'notes.txt', contentType: 'text/plain' };
+      const params: Pick<Document, 'filename' | 'contentType'> = { filename: 'notes.txt', contentType: 'text/plain' };
 
       // Act
       const result = await UploadService.createDocumentPresignedUrl(params);
@@ -49,7 +60,10 @@ describe('upload-service', () => {
 
     it('should generate a UUID v4 documentId', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       const result = await UploadService.createDocumentPresignedUrl(params);
@@ -60,7 +74,10 @@ describe('upload-service', () => {
 
     it('should generate a unique documentId on each call', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       const result1 = await UploadService.createDocumentPresignedUrl(params);
@@ -72,7 +89,10 @@ describe('upload-service', () => {
 
     it('should build the S3 key as documents/{documentId}/{filename}', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       const result = await UploadService.createDocumentPresignedUrl(params);
@@ -84,7 +104,10 @@ describe('upload-service', () => {
 
     it('should pass the configured bucket name to PutObjectCommand', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       await UploadService.createDocumentPresignedUrl(params);
@@ -96,7 +119,10 @@ describe('upload-service', () => {
 
     it('should pass the contentType to PutObjectCommand', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       await UploadService.createDocumentPresignedUrl(params);
@@ -108,7 +134,10 @@ describe('upload-service', () => {
 
     it('should request a 5-minute (300-second) presigned URL expiry', async () => {
       // Arrange
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act
       await UploadService.createDocumentPresignedUrl(params);
@@ -124,10 +153,50 @@ describe('upload-service', () => {
     it('should propagate errors thrown by getSignedUrl', async () => {
       // Arrange
       vi.mocked(getSignedUrl).mockRejectedValueOnce(new Error('S3 unavailable'));
-      const params = { filename: 'resume.pdf', contentType: 'application/pdf' };
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
 
       // Act & Assert
       await expect(UploadService.createDocumentPresignedUrl(params)).rejects.toThrow('S3 unavailable');
+    });
+
+    it('should create a document metadata record in DynamoDB', async () => {
+      // Arrange
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
+
+      // Act
+      const result = await UploadService.createDocumentPresignedUrl(params);
+
+      // Assert
+      expect(DocumentRepository.create).toHaveBeenCalledOnce();
+      const callArgs = vi.mocked(DocumentRepository.create).mock.calls[0][0];
+      expect(callArgs.documentId).toBe(result.documentId);
+      expect(callArgs.filename).toBe('resume.pdf');
+      expect(callArgs.contentType).toBe('application/pdf');
+      expect(callArgs.syncStatus).toBe('PENDING');
+      expect(callArgs.uploadedAt).toBeDefined();
+      // Verify uploadedAt is a valid ISO string close to now
+      const uploadedTime = new Date(callArgs.uploadedAt);
+      const now = new Date();
+      expect(Math.abs(now.getTime() - uploadedTime.getTime())).toBeLessThan(1000); // Within 1 second
+    });
+
+    it('should fail fast if DocumentRepository.create fails', async () => {
+      // Arrange
+      const params: Pick<Document, 'filename' | 'contentType'> = {
+        filename: 'resume.pdf',
+        contentType: 'application/pdf',
+      };
+      const error = new Error('DynamoDB unavailable');
+      vi.mocked(DocumentRepository.create).mockRejectedValueOnce(error);
+
+      // Act & Assert
+      await expect(UploadService.createDocumentPresignedUrl(params)).rejects.toThrow('DynamoDB unavailable');
     });
   });
 });

@@ -8,6 +8,7 @@ import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { ApplicationLogLevel, LoggingFormat, Runtime, SystemLogLevel } from 'aws-cdk-lib/aws-lambda';
+import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +34,7 @@ interface TalentFinderStackProps extends StackProps {
  * Base Talent Finder Stack
  * Provisions foundational AWS resources:
  * - S3 bucket for document corpus (with versioning, encryption, lifecycle rules)
+ * - DynamoDB table for document metadata (with documentId partition key, PAY_PER_REQUEST billing)
  * - Secrets Manager secret for Pinecone API key
  * - CloudWatch log group for Lambda functions
  * - HTTP API Gateway for serverless API endpoints
@@ -76,6 +78,17 @@ export class TalentFinderStack extends Stack {
       ],
     });
 
+    // DynamoDB Table for document metadata
+    const documentsTable = new Table(this, 'DocumentsTable', {
+      tableName: `${props.appName}-documents-${props.envName}`,
+      partitionKey: {
+        name: 'documentId',
+        type: AttributeType.STRING,
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+    });
+
     // Secrets Manager secret for Pinecone API key
     const pineconeSecret = new Secret(this, 'PineconeApiKeySecret', {
       secretName: `${props.appName}/${props.envName}/pinecone-api-key`,
@@ -93,6 +106,7 @@ export class TalentFinderStack extends Stack {
       LOG_FORMAT: props.logFormat,
       LOG_ENABLED: props.logEnabled,
       DOCUMENTS_BUCKET_NAME: documentBucket.bucketName,
+      DOCUMENTS_TABLE_NAME: documentsTable.tableName,
     };
 
     // Health Check Lambda Function using NodejsFunction for esbuild bundling
@@ -155,6 +169,9 @@ export class TalentFinderStack extends Stack {
 
     // Grant upload Lambda s3:PutObject scoped to the documents/* prefix
     documentBucket.grantPut(uploadLambda, 'documents/*');
+
+    // Grant upload Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(uploadLambda);
 
     // Wire upload Lambda to POST /documents/upload-url route
     const uploadIntegration = new HttpLambdaIntegration('UploadIntegration', uploadLambda);

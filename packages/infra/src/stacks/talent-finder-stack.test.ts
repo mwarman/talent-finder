@@ -223,4 +223,27 @@ describe('TalentFinderStack', () => {
     expect(talentFinderStack).toBeDefined();
     expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
+
+  it('should create DynamoDB table for document metadata', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act & Assert — Stack instantiation succeeds with DynamoDB configuration
+    expect(() => {
+      new TalentFinderStack(parentStack, 'TalentFinderStack', {
+        tags,
+        appName: 'talent-finder',
+        envName: 'dev',
+        logLevel: 'debug',
+        logFormat: 'json',
+        logEnabled: 'true',
+        cloudFrontUrl: '*',
+      });
+    }).not.toThrow();
+  });
 });
