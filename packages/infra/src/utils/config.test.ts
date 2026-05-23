@@ -199,6 +199,30 @@ describe('config', () => {
       // Assert
       expect(config.CDK_LOG_ENABLED).toBe('false');
     });
+
+    it('should use default CDK_CLOUDFRONT_URL if not set', () => {
+      // Arrange
+      delete process.env.CDK_CLOUDFRONT_URL;
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_CLOUDFRONT_URL).toBe('*');
+    });
+
+    it('should use custom CDK_CLOUDFRONT_URL if set', () => {
+      // Arrange
+      process.env.CDK_CLOUDFRONT_URL = 'https://d1234567890.cloudfront.net';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_CLOUDFRONT_URL).toBe('https://d1234567890.cloudfront.net');
+    });
   });
 
   describe('getTags', () => {
