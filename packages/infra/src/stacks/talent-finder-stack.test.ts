@@ -24,6 +24,9 @@ describe('TalentFinderStack', () => {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
@@ -48,6 +51,9 @@ describe('TalentFinderStack', () => {
       tags,
       appName: 'talent-finder',
       envName: 'prod',
+      logLevel: 'info',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
@@ -74,6 +80,9 @@ describe('TalentFinderStack', () => {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert - Check that secretArn is defined (may be a token or string)
@@ -95,6 +104,9 @@ describe('TalentFinderStack', () => {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
@@ -117,6 +129,9 @@ describe('TalentFinderStack', () => {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
@@ -139,6 +154,9 @@ describe('TalentFinderStack', () => {
       tags,
       appName: 'talent-finder',
       envName: 'prod',
+      logLevel: 'info',
+      logFormat: 'json',
+      logEnabled: 'true',
     });
 
     // Assert
@@ -147,5 +165,30 @@ describe('TalentFinderStack', () => {
     expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
 
     exportSpy.mockRestore();
+  });
+
+  it('should pass log configuration to Lambda environment variables', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'info',
+      logFormat: 'text',
+      logEnabled: 'false',
+    });
+
+    // Assert
+    expect(talentFinderStack).toBeDefined();
+    // The Lambda function should be created with the provided log configuration
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 });

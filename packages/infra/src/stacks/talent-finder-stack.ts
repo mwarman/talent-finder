@@ -16,10 +16,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * TalentFinderStackProps extends StackProps to include application-specific properties
  * - appName: The name of the application (e.g., "talent-finder")
  * - envName: The environment identifier (e.g., "dev", "prod")
+ * - logLevel: Lambda logging level
+ * - logFormat: Lambda logging format
+ * - logEnabled: Enable Lambda logging
  */
 interface TalentFinderStackProps extends StackProps {
   appName: string;
   envName: string;
+  logLevel: string;
+  logFormat: string;
+  logEnabled: string;
 }
 
 /**
@@ -69,6 +75,13 @@ export class TalentFinderStack extends Stack {
       description: `Talent Finder API for ${props.envName} environment`,
     });
 
+    // Base Lambda environment variables for all functions in this stack
+    const baseLambdaEnvironment = {
+      LOG_LEVEL: props.logLevel,
+      LOG_FORMAT: props.logFormat,
+      LOG_ENABLED: props.logEnabled,
+    };
+
     // Health Check Lambda Function using NodejsFunction for esbuild bundling
     const healthLambda = new NodejsFunction(this, 'HealthFunction', {
       functionName: `${props.appName}-health-${props.envName}`,
@@ -85,11 +98,7 @@ export class TalentFinderStack extends Stack {
         retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
         removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       }),
-      environment: {
-        LOG_LEVEL: 'debug',
-        LOG_FORMAT: 'json',
-        LOG_ENABLED: 'true',
-      },
+      environment: baseLambdaEnvironment,
       bundling: {
         minify: true,
         target: 'esnext',

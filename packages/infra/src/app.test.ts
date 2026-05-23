@@ -90,4 +90,34 @@ describe('app', () => {
     expect(config.CDK_ORGANIZATION_UNIT).toBe('unknown');
     expect(config.CDK_RESOURCE_OWNER).toBe('unknown');
   });
+
+  it('should load log configuration with valid environment variables', () => {
+    // Arrange
+    process.env.CDK_LOG_LEVEL = 'info';
+    process.env.CDK_LOG_FORMAT = 'text';
+    process.env.CDK_LOG_ENABLED = 'false';
+
+    // Act
+    const config = getConfig();
+
+    // Assert
+    expect(config.CDK_LOG_LEVEL).toBe('info');
+    expect(config.CDK_LOG_FORMAT).toBe('text');
+    expect(config.CDK_LOG_ENABLED).toBe('false');
+  });
+
+  it('should use default log configuration when not set', () => {
+    // Arrange
+    delete process.env.CDK_LOG_LEVEL;
+    delete process.env.CDK_LOG_FORMAT;
+    delete process.env.CDK_LOG_ENABLED;
+
+    // Act
+    const config = getConfig();
+
+    // Assert
+    expect(config.CDK_LOG_LEVEL).toBe('info');
+    expect(config.CDK_LOG_FORMAT).toBe('json');
+    expect(config.CDK_LOG_ENABLED).toBe('true');
+  });
 });

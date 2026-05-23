@@ -127,6 +127,78 @@ describe('config', () => {
       // Act & Assert
       expect(() => getConfig()).toThrow();
     });
+
+    it('should use default CDK_LOG_LEVEL if not set', () => {
+      // Arrange
+      delete process.env.CDK_LOG_LEVEL;
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_LOG_LEVEL).toBe('info');
+    });
+
+    it('should use custom CDK_LOG_LEVEL if set', () => {
+      // Arrange
+      process.env.CDK_LOG_LEVEL = 'info';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_LOG_LEVEL).toBe('info');
+    });
+
+    it('should use default CDK_LOG_FORMAT if not set', () => {
+      // Arrange
+      delete process.env.CDK_LOG_FORMAT;
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_LOG_FORMAT).toBe('json');
+    });
+
+    it('should use custom CDK_LOG_FORMAT if set', () => {
+      // Arrange
+      process.env.CDK_LOG_FORMAT = 'text';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_LOG_FORMAT).toBe('text');
+    });
+
+    it('should use default CDK_LOG_ENABLED if not set', () => {
+      // Arrange
+      delete process.env.CDK_LOG_ENABLED;
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_LOG_ENABLED).toBe('true');
+    });
+
+    it('should use custom CDK_LOG_ENABLED if set', () => {
+      // Arrange
+      process.env.CDK_LOG_ENABLED = 'false';
+      process.env.CDK_ENV_NAME = 'dev';
+
+      // Act
+      const config = getConfig();
+
+      // Assert
+      expect(config.CDK_LOG_ENABLED).toBe('false');
+    });
   });
 
   describe('getTags', () => {

@@ -39,4 +39,7 @@ new TalentFinderStack(app, 'TalentFinderStack', {
   env: envConfig,
   appName: config.CDK_APP_NAME,
   envName: config.CDK_ENV_NAME,
+  logLevel: config.CDK_LOG_LEVEL,
+  logFormat: config.CDK_LOG_FORMAT,
+  logEnabled: config.CDK_LOG_ENABLED,
 });
