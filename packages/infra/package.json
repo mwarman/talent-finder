@@ -21,6 +21,7 @@
   "devDependencies": {
     "aws-cdk": "2.1124.1",
     "aws-cdk-lib": "2.257.0",
-    "constructs": "10.6.0"
+    "constructs": "10.6.0",
+    "esbuild": "0.28.0"
   }
 }

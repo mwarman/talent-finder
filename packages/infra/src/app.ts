@@ -37,5 +37,6 @@ new TalentFinderStack(app, 'TalentFinderStack', {
   description: `Talent Finder application stack for ${config.CDK_ENV_NAME} environment`,
   tags,
   env: envConfig,
+  appName: config.CDK_APP_NAME,
   envName: config.CDK_ENV_NAME,
 });

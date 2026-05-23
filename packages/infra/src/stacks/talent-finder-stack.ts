@@ -1,10 +1,24 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Stack, StackProps, Duration, RemovalPolicy, SecretValue } from 'aws-cdk-lib';
 import { Bucket, BucketEncryption, StorageClass } from 'aws-cdk-lib/aws-s3';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { ApplicationLogLevel, LoggingFormat, Runtime, SystemLogLevel } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * TalentFinderStackProps extends StackProps to include application-specific properties
+ * - appName: The name of the application (e.g., "talent-finder")
+ * - envName: The environment identifier (e.g., "dev", "prod")
+ */
 interface TalentFinderStackProps extends StackProps {
+  appName: string;
   envName: string;
 }
 
@@ -14,23 +28,24 @@ interface TalentFinderStackProps extends StackProps {
  * - S3 bucket for document corpus (with versioning, encryption, lifecycle rules)
  * - Secrets Manager secret for Pinecone API key
  * - CloudWatch log group for Lambda functions
+ * - HTTP API Gateway for serverless API endpoints
+ * - Base Lambda IAM execution role with CloudWatch Logs permissions
+ * - Health check Lambda function wired to GET /health route
  */
 export class TalentFinderStack extends Stack {
   public readonly s3BucketName: string;
   public readonly secretArn: string;
-  public readonly logGroupName: string;
+  public readonly apiEndpointUrl: string;
 
   constructor(scope: Construct, id: string, props: TalentFinderStackProps) {
     super(scope, id, props);
-
-    const { envName } = props;
 
     // S3 Bucket for document corpus
     const documentBucket = new Bucket(this, 'DocumentBucket', {
       versioned: true,
       encryption: BucketEncryption.S3_MANAGED,
-      removalPolicy: envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      autoDeleteObjects: envName !== 'prod',
+      removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      autoDeleteObjects: props.envName !== 'prod',
       lifecycleRules: [
         {
           transitions: [
@@ -45,25 +60,59 @@ export class TalentFinderStack extends Stack {
 
     // Secrets Manager secret for Pinecone API key
     const pineconeSecret = new Secret(this, 'PineconeApiKeySecret', {
-      secretName: `talent-finder/${envName}/pinecone-api-key`,
+      secretName: `${props.appName}/${props.envName}/pinecone-api-key`,
       secretStringValue: SecretValue.unsafePlainText('placeholder-pinecone-key'),
     });
 
-    // CloudWatch Log Group for Lambda functions
-    const lambdaLogGroup = new LogGroup(this, 'LambdaLogGroup', {
-      logGroupName: `/aws/lambda/talent-finder-${envName}`,
-      retention: RetentionDays.ONE_WEEK,
-      removalPolicy: envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+    // HTTP API Gateway
+    const httpApi = new HttpApi(this, 'HttpApi', {
+      description: `Talent Finder API for ${props.envName} environment`,
+    });
+
+    // Health Check Lambda Function using NodejsFunction for esbuild bundling
+    const healthLambda = new NodejsFunction(this, 'HealthFunction', {
+      functionName: `${props.appName}-health-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/health.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: Duration.seconds(6),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'HealthFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-health-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: {
+        LOG_LEVEL: 'debug',
+        LOG_FORMAT: 'json',
+        LOG_ENABLED: 'true',
+      },
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Wire health Lambda to GET /health route
+    const healthIntegration = new HttpLambdaIntegration('HealthIntegration', healthLambda);
+    httpApi.addRoutes({
+      path: '/health',
+      methods: [HttpMethod.GET],
+      integration: healthIntegration,
     });
 
     // Store values for export
     this.s3BucketName = documentBucket.bucketName;
     this.secretArn = pineconeSecret.secretArn;
-    this.logGroupName = lambdaLogGroup.logGroupName;
+    this.apiEndpointUrl = httpApi.url || '';
 
-    // Stack outputs for consumption by feature stacks
-    this.exportValue(this.s3BucketName, { name: `TalentFinder-S3BucketName-${envName}` });
-    this.exportValue(this.secretArn, { name: `TalentFinder-SecretArn-${envName}` });
-    this.exportValue(this.logGroupName, { name: `TalentFinder-LogGroupName-${envName}` });
+    // Stack outputs for consumption by feature stacks and end users
+    this.exportValue(this.s3BucketName, { name: `TalentFinder-S3BucketName-${props.envName}` });
+    this.exportValue(this.secretArn, { name: `TalentFinder-SecretArn-${props.envName}` });
+    this.exportValue(this.apiEndpointUrl, { name: `TalentFinder-ApiEndpoint-${props.envName}` });
   }
 }
