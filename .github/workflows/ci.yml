@@ -55,3 +55,11 @@ jobs:
 
       - name: Synthesize AWS CDK infrastructure
         run: npm run cdk:synth --workspace packages/infra
+
+      - name: Clean up sensitive files
+        if: always()
+        run: |
+          echo "🧹 Cleaning up sensitive files..."
+          rm -f ./packages/infra/.env
+          rm -rf ./packages/infra/cdk.out
+          echo "✅ Sensitive files cleaned up"
