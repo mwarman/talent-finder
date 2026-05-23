@@ -17,6 +17,10 @@ const ConfigSchema = z.object({
     .enum(['json', 'text'])
     .default('json')
     .describe('LOG_FORMAT - Logging format (optional, default: "json")'),
+  DOCUMENTS_BUCKET_NAME: z
+    .string()
+    .min(1)
+    .describe('DOCUMENTS_BUCKET_NAME - S3 bucket name for document storage (required)'),
 });
 
 /**
