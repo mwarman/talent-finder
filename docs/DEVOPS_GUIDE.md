@@ -85,6 +85,10 @@ Deploys AWS infrastructure and application code to AWS. Uses AWS CDK to synthesi
 - `AWS_ROLE_ARN` — Full ARN of the IAM role to assume for deployment (e.g., `arn:aws:iam::123456789012:role/github-deploy-role`)
 - `AWS_REGION` — AWS region for deployment (e.g., `us-east-1`)
 
+**GitHub Repository Secrets** (must be configured in repository settings):
+
+- `CDK_ENV` — Full contents of the `packages/infra/.env` file. All `CDK_*` configuration variables (including `CDK_ENV_NAME`, `CDK_PINECONE_API_KEY`, and `CDK_PINECONE_INDEX_HOST`) are bundled into this single secret.
+
 **AWS Configuration** (infrastructure-side prerequisites):
 
 - OIDC provider configured in AWS account (created by `aws-actions/configure-aws-credentials@v6`)
@@ -136,6 +140,10 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 - `AWS_ROLE_ARN` — Full ARN of the IAM role to assume for teardown
 - `AWS_REGION` — AWS region for teardown
 
+**GitHub Repository Secrets** (must be configured in repository settings):
+
+- `CDK_ENV` — Full contents of the `packages/infra/.env` file. All `CDK_*` configuration variables (including `CDK_ENV_NAME`, `CDK_PINECONE_API_KEY`, and `CDK_PINECONE_INDEX_HOST`) are bundled into this single secret.
+
 **AWS Configuration**:
 
 - Same OIDC provider and IAM role as Deploy workflow
@@ -155,14 +163,26 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 
 ### GitHub Repository Variables
 
-These are configured in **Settings → Secrets and variables → Variables**:
+These are configured in **Settings → Secrets and variables → Variables** and are visible in workflow logs. Use only for non-sensitive infrastructure identifiers:
 
 ```
 AWS_ROLE_ARN    = arn:aws:iam::123456789012:role/github-deploy-role
 AWS_REGION      = us-east-1
 ```
 
-**Note:** Variables (not secrets) are not encrypted and are visible in logs. Use repository variables only for non-sensitive configuration like region and role ARN. AWS credentials are obtained via OIDC federation, not stored as secrets.
+### GitHub Repository Secrets
+
+These are configured in **Settings → Secrets and variables → Secrets** and are masked in all workflow logs. Required for every Deploy and Teardown run:
+
+| Secret    | Description                                                                                                                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CDK_ENV` | Full contents of the `packages/infra/.env` file. All `CDK_*` configuration variables — including `CDK_ENV_NAME`, `CDK_PINECONE_API_KEY`, and `CDK_PINECONE_INDEX_HOST` — are bundled into this single secret. |
+
+The workflow writes `CDK_ENV` to `packages/infra/.env` at runtime before invoking CDK. Storing the entire file as one secret:
+
+- Keeps sensitive values (API keys, environment name) masked in workflow logs
+- Prevents accidental cross-environment deployments from misconfigured variables
+- Simplifies secret rotation — update `CDK_ENV` once to apply all changes
 
 ### AWS OIDC Configuration
 
@@ -212,13 +232,14 @@ Before triggering **Deploy** or **Teardown**:
 
 ## Troubleshooting
 
-| Issue                            | Cause                            | Resolution                                       |
-| -------------------------------- | -------------------------------- | ------------------------------------------------ |
-| CI fails on lint/format          | Code style violations            | Run `npm run format` locally and commit          |
-| Deploy fails with "AccessDenied" | Insufficient IAM permissions     | Verify role policy allows CDK operations         |
-| Teardown hangs                   | Resource has deletion protection | Manually remove protection in AWS Console        |
-| Node.js version mismatch         | `.nvmrc` file outdated           | Update `.nvmrc` to desired version               |
-| CDK synthesis fails              | Infrastructure code errors       | Review CDK stack definitions in `packages/infra` |
+| Issue                            | Cause                                   | Resolution                                                                                                 |
+| -------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| CI fails on lint/format          | Code style violations                   | Run `npm run format` locally and commit                                                                    |
+| Deploy fails with "AccessDenied" | Insufficient IAM permissions            | Verify role policy allows CDK operations                                                                   |
+| Deploy fails on KB provisioning  | Invalid or missing Pinecone credentials | Verify `CDK_PINECONE_API_KEY` and `CDK_PINECONE_INDEX_HOST` values inside the `CDK_ENV` secret are correct |
+| Teardown hangs                   | Resource has deletion protection        | Manually remove protection in AWS Console                                                                  |
+| Node.js version mismatch         | `.nvmrc` file outdated                  | Update `.nvmrc` to desired version                                                                         |
+| CDK synthesis fails              | Infrastructure code errors              | Review CDK stack definitions in `packages/infra`                                                           |
 
 ---
 

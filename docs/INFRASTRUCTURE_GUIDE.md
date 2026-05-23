@@ -24,14 +24,16 @@ The `.env` file is automatically loaded when the CDK app runs, so no additional 
 
 ### Environment Variables
 
-| Variable                | Required | Default         | Description                                                 |
-| ----------------------- | -------- | --------------- | ----------------------------------------------------------- |
-| `CDK_APP_NAME`          | No       | `talent-finder` | Application name for resource tagging                       |
-| `CDK_ENV_NAME`          | No       | `dev`           | Environment identifier (`dev`, `qa`, or `prod`)             |
-| `CDK_ORGANIZATION_UNIT` | No       | `unknown`       | Organization/OU for resource tagging                        |
-| `CDK_RESOURCE_OWNER`    | No       | `unknown`       | Team or person responsible for resources                    |
-| `CDK_ACCOUNT`           | No       | —               | AWS Account ID (optional, uses credential chain if omitted) |
-| `CDK_REGION`            | No       | —               | AWS Region (optional, uses credential chain if omitted)     |
+| Variable                  | Required | Default         | Description                                                                                                                                                                                                                    |
+| ------------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CDK_APP_NAME`            | No       | `talent-finder` | Application name for resource tagging                                                                                                                                                                                          |
+| `CDK_ENV_NAME`            | No       | `dev`           | Environment identifier (`dev`, `qa`, or `prod`)                                                                                                                                                                                |
+| `CDK_ORGANIZATION_UNIT`   | No       | `unknown`       | Organization/OU for resource tagging                                                                                                                                                                                           |
+| `CDK_RESOURCE_OWNER`      | No       | `unknown`       | Team or person responsible for resources                                                                                                                                                                                       |
+| `CDK_ACCOUNT`             | No       | —               | AWS Account ID (optional, uses credential chain if omitted)                                                                                                                                                                    |
+| `CDK_REGION`              | No       | —               | AWS Region (optional, uses credential chain if omitted)                                                                                                                                                                        |
+| `CDK_PINECONE_INDEX_HOST` | **Yes**  | —               | Pinecone Serverless index host URL (e.g., `https://index-name-xxx.svc.pinecone.io`). Obtained after completing [Manual Pinecone Setup](#manual-pinecone-setup).                                                                |
+| `CDK_PINECONE_API_KEY`    | **Yes**  | —               | Pinecone API key. Written into Secrets Manager at deploy time. Bedrock validates this key when provisioning the Knowledge Base — deploy will fail with an invalid key. **Treat as a secret; never commit to version control.** |
 
 ### AWS Credentials
 
@@ -61,6 +63,8 @@ cp packages/infra/.env.example packages/infra/.env
 ```
 
 The `.env` file is automatically loaded by the CDK app.
+
+> **Prerequisites before deploying:** `CDK_PINECONE_INDEX_HOST` and `CDK_PINECONE_API_KEY` must be set to valid values. The Pinecone index must exist and the API key must be active — Bedrock validates both during Knowledge Base provisioning and the deploy will fail otherwise. Complete [Manual Pinecone Setup](#manual-pinecone-setup) first.
 
 **Option 2: Export environment variables**
 
@@ -103,6 +107,54 @@ After successful deployment, AWS CloudFormation outputs will include:
 - **S3 Bucket Name:** Document corpus storage
 - **Secret ARN:** Pinecone API key location in Secrets Manager
 - **Log Group Name:** CloudWatch log group for Lambda functions
+- **Knowledge Base ID:** Bedrock Knowledge Base identifier (used by retrieval Lambdas)
+- **Data Source ID:** Bedrock Knowledge Base S3 data source identifier
+
+## Manual Pinecone Setup
+
+The Bedrock Knowledge Base uses Pinecone Serverless as its vector store. The index must be created manually before running `cdk deploy` because CDK cannot provision Pinecone resources directly.
+
+### Steps
+
+1. **Create a Pinecone account** at [pinecone.io](https://pinecone.io) if you do not have one.
+
+2. **Create a Serverless index** with the following settings:
+
+   | Setting      | Value                 | Notes                                                                    |
+   | ------------ | --------------------- | ------------------------------------------------------------------------ |
+   | Index name   | Any                   | Choose a descriptive name, e.g. `talent-finder-dev`                      |
+   | Dimensions   | **1536**              | Required for Amazon Titan Embeddings v2 (`amazon.titan-embed-text-v2:0`) |
+   | Metric       | **cosine**            | Required for semantic similarity search                                  |
+   | Cloud/Region | Match your AWS region | Reduces latency and egress costs                                         |
+
+3. **Copy the index host URL** from the Pinecone console (format: `https://index-name-xxx-yyy.svc.pinecone.io`).
+
+4. **Copy the API key** from the Pinecone console.
+
+5. **Set the Pinecone API key** as a configuration variable before deploying:
+
+   ```bash
+   # Local development (.env file)
+   echo 'CDK_PINECONE_API_KEY=<your-pinecone-api-key>' >> packages/infra/.env
+   ```
+
+   For CI/CD deployments, add `CDK_PINECONE_API_KEY=<your-key>` to the `CDK_ENV` GitHub Actions secret — see [docs/DEVOPS_GUIDE.md](./DEVOPS_GUIDE.md).
+
+   CDK writes the key to Secrets Manager in the correct `{"apiKey":"..."}` JSON format at deploy time. **Do not commit the API key to version control.**
+
+   > **Important:** Bedrock validates the Pinecone API key when provisioning the Knowledge Base. The deploy will fail if the key is missing, empty, or invalid.
+
+6. **Set the index host URL** as an environment variable before deploying:
+
+   ```bash
+   export CDK_PINECONE_INDEX_HOST='https://index-name-xxx-yyy.svc.pinecone.io'
+   ```
+
+   Or add it to `packages/infra/.env`:
+
+   ```
+   CDK_PINECONE_INDEX_HOST=https://index-name-xxx-yyy.svc.pinecone.io
+   ```
 
 ## Stack Resources
 
@@ -116,16 +168,28 @@ After successful deployment, AWS CloudFormation outputs will include:
 ### Secrets Manager Secret
 
 - **Name:** `talent-finder/{env-name}/pinecone-api-key`
-- **Initial Value:** Placeholder value
-- **Usage:** Reference from Lambda functions to access Pinecone API key
+- **Value:** Written at deploy time from `CDK_PINECONE_API_KEY` as `{"apiKey":"<key>"}` (JSON format required by Bedrock)
+- **Rotation:** To rotate the key, update `CDK_PINECONE_API_KEY` and redeploy. CDK will update the secret in place.
 
-Update the secret with actual Pinecone credentials:
+### Bedrock Knowledge Base
 
-```bash
-aws secretsmanager update-secret \
-  --secret-id talent-finder/dev/pinecone-api-key \
-  --secret-string '<actual-pinecone-api-key>'
-```
+- **Embedding Model:** Amazon Titan Embeddings v2 (`amazon.titan-embed-text-v2:0`) — produces 1536-dimensional vectors
+- **Vector Store:** Pinecone Serverless (connection string from `CDK_PINECONE_INDEX_HOST`)
+- **IAM Execution Role:** Grants the Bedrock service `s3:GetObject`, `s3:ListBucket` (documents bucket), `secretsmanager:GetSecretValue` (Pinecone secret), and `bedrock:InvokeModel` (Titan Embeddings v2)
+- **Outputs:** `TalentFinder-KnowledgeBaseId-{env}`, `TalentFinder-DataSourceId-{env}`
+
+#### Bedrock Knowledge Base Data Source
+
+- **Source:** S3 bucket, `documents/` prefix
+- **Chunking Strategy:** Hierarchical
+
+  | Parameter               | Value    | Notes                                       |
+  | ----------------------- | -------- | ------------------------------------------- |
+  | Parent chunk max tokens | **1500** | Broad context for richer answer generation  |
+  | Child chunk max tokens  | **300**  | Fine-grained unit for precise retrieval     |
+  | Overlap tokens          | **60**   | Continuity across adjacent chunk boundaries |
+
+  These values are tunable via the `levelConfigurations` and `overlapTokens` fields in `packages/infra/src/stacks/talent-finder-stack.ts`.
 
 ### CloudWatch Log Group
 
@@ -227,9 +291,8 @@ npm run cdk deploy -w packages/infra --require-approval=never
 
 Once the base stack is deployed:
 
-1. **Update Secrets Manager:** Replace placeholder Pinecone API key with actual credentials
-2. **Create Feature Stacks:** Implement feature-specific stacks (e.g., Bedrock KB, Lambda functions) that reference base stack outputs
-3. **Configure GitHub Actions:** Set up CI/CD pipeline for automated deployments
+1. **Complete Manual Pinecone Setup:** Create the Serverless index and copy the API key into Secrets Manager — see [Manual Pinecone Setup](#manual-pinecone-setup).
+2. **Set `CDK_PINECONE_INDEX_HOST`:** (Optional - If not already set.) Export the Pinecone index host URL and redeploy to provision the Bedrock Knowledge Base.
 
 ## References
 
