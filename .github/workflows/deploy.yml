@@ -32,7 +32,15 @@ jobs:
       - name: Create infrastructure .env file
         working-directory: ./packages/infra
         run: |
-          echo "${{ vars.CDK_ENV }}" > .env
+          echo "CDK_APP_NAME=${{ vars.CDK_APP_NAME }}" >> .env
+          echo "CDK_ENV_NAME=${{ vars.CDK_ENV_NAME }}" >> .env
+          echo "CDK_ORGANIZATION_UNIT=${{ vars.CDK_ORGANIZATION_UNIT }}" >> .env
+          echo "CDK_RESOURCE_OWNER=${{ vars.CDK_RESOURCE_OWNER }}" >> .env
+          echo "CDK_LOG_LEVEL=${{ vars.CDK_LOG_LEVEL }}" >> .env
+          echo "CDK_LOG_FORMAT=${{ vars.CDK_LOG_FORMAT }}" >> .env
+          echo "CDK_LOG_ENABLED=${{ vars.CDK_LOG_ENABLED }}" >> .env
+          echo "CDK_PINECONE_INDEX_HOST=${{ vars.CDK_PINECONE_INDEX_HOST }}" >> .env
+          echo "CDK_PINECONE_API_KEY=${{ secrets.CDK_PINECONE_API_KEY }}" >> .env
 
       - name: Build
         run: npm run build
