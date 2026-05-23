@@ -33,9 +33,11 @@ Validates code quality, formatting, linting, and build integrity on every pull r
 3. **Install Dependencies** — Runs `npm ci` (clean install) to ensure reproducible installs
 4. **Format Check** — Validates code formatting with `npm run format:check`
 5. **Lint** — Runs ESLint across the monorepo with `npm run lint`
-6. **Build** — Compiles all packages with `npm run build`
-7. **Test with Coverage** — Executes unit tests and enforces coverage thresholds via `npm run test:coverage`
-8. **Synthesize CDK** — Validates AWS CDK infrastructure definitions with `npm run cdk:synth`
+6. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets
+7. **Build** — Compiles all packages with `npm run build`
+8. **Test with Coverage** — Executes unit tests and enforces coverage thresholds via `npm run test:coverage`
+9. **Synthesize CDK** — Validates AWS CDK infrastructure definitions with `npm run cdk:synth`
+10. **Clean Up Sensitive Files** — Removes `.env` and `cdk.out` to prevent accidental secret exposure
 
 ### Required Configuration
 
@@ -70,13 +72,15 @@ Deploys AWS infrastructure and application code to AWS. Uses AWS CDK to synthesi
 1. **Checkout Code** — Retrieves the repository at the current commit
 2. **Setup Node.js** — Installs Node.js from `.nvmrc` with npm cache
 3. **Install Dependencies** — Runs `npm ci` for clean dependency installation
-4. **Build** — Compiles all packages with `npm run build`
-5. **Configure AWS Credentials** — Authenticates to AWS using OIDC federation
+4. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets
+5. **Build** — Compiles all packages with `npm run build`
+6. **Configure AWS Credentials** — Authenticates to AWS using OIDC federation
    - Assumes IAM role specified in `AWS_ROLE_ARN`
    - Targets region in `AWS_REGION`
    - Session name: `deploy-talent-finder-{run-id}`
-6. **Synthesize CDK** — Generates CloudFormation templates with `npm run cdk:synth`
-7. **Deploy Infrastructure** — Deploys synthesized infrastructure with `npm run cdk:deploy`
+7. **Synthesize CDK** — Generates CloudFormation templates with `npm run cdk:synth`
+8. **Deploy Infrastructure** — Deploys synthesized infrastructure with `npm run cdk:deploy`
+9. **Clean Up Sensitive Files** — Removes `.env` to prevent accidental secret exposure
 
 ### Required Configuration
 
@@ -84,10 +88,18 @@ Deploys AWS infrastructure and application code to AWS. Uses AWS CDK to synthesi
 
 - `AWS_ROLE_ARN` — Full ARN of the IAM role to assume for deployment (e.g., `arn:aws:iam::123456789012:role/github-deploy-role`)
 - `AWS_REGION` — AWS region for deployment (e.g., `us-east-1`)
+- `CDK_APP_NAME` — Application name for resource identification
+- `CDK_ENV_NAME` — Environment name (e.g., dev, staging, prod)
+- `CDK_ORGANIZATION_UNIT` — Organization unit for resource tagging
+- `CDK_RESOURCE_OWNER` — Owner identifier for resource tagging
+- `CDK_LOG_LEVEL` — Logging level for Lambda and services
+- `CDK_LOG_FORMAT` — Log format (json or text)
+- `CDK_LOG_ENABLED` — Enable/disable logging (true or false)
+- `CDK_PINECONE_INDEX_HOST` — Pinecone vector database index host URL
 
 **GitHub Repository Secrets** (must be configured in repository settings):
 
-- `CDK_ENV` — Full contents of the `packages/infra/.env` file. All `CDK_*` configuration variables (including `CDK_ENV_NAME`, `CDK_PINECONE_API_KEY`, and `CDK_PINECONE_INDEX_HOST`) are bundled into this single secret.
+- `CDK_PINECONE_API_KEY` — API key for Pinecone vector database authentication
 
 **AWS Configuration** (infrastructure-side prerequisites):
 
@@ -124,14 +136,16 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 1. **Checkout Code** — Retrieves the repository at the current commit
 2. **Setup Node.js** — Installs Node.js from `.nvmrc` with npm cache
 3. **Install Dependencies** — Runs `npm ci` for clean dependency installation
-4. **Build** — Compiles all packages with `npm run build`
-5. **Configure AWS Credentials** — Authenticates to AWS using OIDC federation
+4. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets
+5. **Build** — Compiles all packages with `npm run build`
+6. **Configure AWS Credentials** — Authenticates to AWS using OIDC federation
    - Assumes IAM role specified in `AWS_ROLE_ARN`
    - Targets region in `AWS_REGION`
    - Session name: `teardown-talent-finder-{run-id}`
-6. **Synthesize CDK** — Generates CloudFormation templates with `npm run cdk:synth`
-7. **Destroy Infrastructure** — Removes all resources with `npm run cdk:destroy`
+7. **Synthesize CDK** — Generates CloudFormation templates with `npm run cdk:synth`
+8. **Destroy Infrastructure** — Removes all resources with `npm run cdk:destroy`
    - Prompts for confirmation (requires interactive input or `--force` flag in CDK configuration)
+9. **Clean Up Sensitive Files** — Removes `.env` to prevent accidental secret exposure
 
 ### Required Configuration
 
@@ -139,10 +153,18 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 
 - `AWS_ROLE_ARN` — Full ARN of the IAM role to assume for teardown
 - `AWS_REGION` — AWS region for teardown
+- `CDK_APP_NAME` — Application name for resource identification
+- `CDK_ENV_NAME` — Environment name (e.g., dev, staging, prod)
+- `CDK_ORGANIZATION_UNIT` — Organization unit for resource tagging
+- `CDK_RESOURCE_OWNER` — Owner identifier for resource tagging
+- `CDK_LOG_LEVEL` — Logging level for Lambda and services
+- `CDK_LOG_FORMAT` — Log format (json or text)
+- `CDK_LOG_ENABLED` — Enable/disable logging (true or false)
+- `CDK_PINECONE_INDEX_HOST` — Pinecone vector database index host URL
 
 **GitHub Repository Secrets** (must be configured in repository settings):
 
-- `CDK_ENV` — Full contents of the `packages/infra/.env` file. All `CDK_*` configuration variables (including `CDK_ENV_NAME`, `CDK_PINECONE_API_KEY`, and `CDK_PINECONE_INDEX_HOST`) are bundled into this single secret.
+- `CDK_PINECONE_API_KEY` — API key for Pinecone vector database authentication
 
 **AWS Configuration**:
 
@@ -163,26 +185,55 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 
 ### GitHub Repository Variables
 
-These are configured in **Settings → Secrets and variables → Variables** and are visible in workflow logs. Use only for non-sensitive infrastructure identifiers:
+These are configured in **Settings → Secrets and variables → Variables** and are visible in workflow logs. Use only for non-sensitive infrastructure identifiers and configuration:
 
-```
-AWS_ROLE_ARN    = arn:aws:iam::123456789012:role/github-deploy-role
-AWS_REGION      = us-east-1
-```
+| Variable                  | Description                                                  | Example                                             |
+| ------------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `AWS_ROLE_ARN`            | Full ARN of the IAM role to assume for deployment/teardown   | `arn:aws:iam::123456789012:role/github-deploy-role` |
+| `AWS_REGION`              | AWS region for deployment and teardown operations            | `us-east-1`                                         |
+| `CDK_APP_NAME`            | Application name used for resource naming and identification | `talent-finder`                                     |
+| `CDK_ENV_NAME`            | Environment name (e.g., dev, staging, prod)                  | `dev`                                               |
+| `CDK_ORGANIZATION_UNIT`   | Organization unit for resource tagging                       | `engineering`                                       |
+| `CDK_RESOURCE_OWNER`      | Owner identifier for resource tagging                        | `team-name`                                         |
+| `CDK_LOG_LEVEL`           | Logging level for Lambda functions and services              | `info`                                              |
+| `CDK_LOG_FORMAT`          | Log format (e.g., json, text)                                | `json`                                              |
+| `CDK_LOG_ENABLED`         | Enable/disable logging (true/false)                          | `true`                                              |
+| `CDK_PINECONE_INDEX_HOST` | Pinecone vector database index host URL                      | `https://index-xxx.pinecone.io`                     |
 
 ### GitHub Repository Secrets
 
-These are configured in **Settings → Secrets and variables → Secrets** and are masked in all workflow logs. Required for every Deploy and Teardown run:
+These are configured in **Settings → Secrets and variables → Secrets** and are masked in all workflow logs. Use only for sensitive values:
 
-| Secret    | Description                                                                                                                                                                                                   |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CDK_ENV` | Full contents of the `packages/infra/.env` file. All `CDK_*` configuration variables — including `CDK_ENV_NAME`, `CDK_PINECONE_API_KEY`, and `CDK_PINECONE_INDEX_HOST` — are bundled into this single secret. |
+| Secret                 | Description                                         |
+| ---------------------- | --------------------------------------------------- |
+| `CDK_PINECONE_API_KEY` | API key for Pinecone vector database authentication |
 
-The workflow writes `CDK_ENV` to `packages/infra/.env` at runtime before invoking CDK. Storing the entire file as one secret:
+### Workflow Configuration Flow
 
-- Keeps sensitive values (API keys, environment name) masked in workflow logs
-- Prevents accidental cross-environment deployments from misconfigured variables
-- Simplifies secret rotation — update `CDK_ENV` once to apply all changes
+All three workflows (CI, Deploy, Teardown) follow this process to prepare the `.env` file:
+
+1. **Checkout repository** at target commit/branch
+2. **Build .env file** in `packages/infra/` by injecting individual GitHub variables and secrets:
+   ```bash
+   echo "CDK_APP_NAME=${{ vars.CDK_APP_NAME }}" >> .env
+   echo "CDK_ENV_NAME=${{ vars.CDK_ENV_NAME }}" >> .env
+   echo "CDK_ORGANIZATION_UNIT=${{ vars.CDK_ORGANIZATION_UNIT }}" >> .env
+   echo "CDK_RESOURCE_OWNER=${{ vars.CDK_RESOURCE_OWNER }}" >> .env
+   echo "CDK_LOG_LEVEL=${{ vars.CDK_LOG_LEVEL }}" >> .env
+   echo "CDK_LOG_FORMAT=${{ vars.CDK_LOG_FORMAT }}" >> .env
+   echo "CDK_LOG_ENABLED=${{ vars.CDK_LOG_ENABLED }}" >> .env
+   echo "CDK_PINECONE_INDEX_HOST=${{ vars.CDK_PINECONE_INDEX_HOST }}" >> .env
+   echo "CDK_PINECONE_API_KEY=${{ secrets.CDK_PINECONE_API_KEY }}" >> .env
+   ```
+3. **Execute CDK commands** (synth, deploy, destroy) which read the `.env` file
+4. **Clean up sensitive files** (.env, cdk.out) to prevent accidental exposure
+
+This approach ensures:
+
+- **Transparency:** All configuration variables are individually visible in GitHub settings
+- **Auditability:** Changes to specific variables are tracked separately
+- **Security:** Sensitive values (API keys) are still masked in workflow logs
+- **Flexibility:** Easy to update individual environment values without touching workflow files
 
 ### AWS OIDC Configuration
 
@@ -232,14 +283,15 @@ Before triggering **Deploy** or **Teardown**:
 
 ## Troubleshooting
 
-| Issue                            | Cause                                   | Resolution                                                                                                 |
-| -------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| CI fails on lint/format          | Code style violations                   | Run `npm run format` locally and commit                                                                    |
-| Deploy fails with "AccessDenied" | Insufficient IAM permissions            | Verify role policy allows CDK operations                                                                   |
-| Deploy fails on KB provisioning  | Invalid or missing Pinecone credentials | Verify `CDK_PINECONE_API_KEY` and `CDK_PINECONE_INDEX_HOST` values inside the `CDK_ENV` secret are correct |
-| Teardown hangs                   | Resource has deletion protection        | Manually remove protection in AWS Console                                                                  |
-| Node.js version mismatch         | `.nvmrc` file outdated                  | Update `.nvmrc` to desired version                                                                         |
-| CDK synthesis fails              | Infrastructure code errors              | Review CDK stack definitions in `packages/infra`                                                           |
+| Issue                            | Cause                                     | Resolution                                                                                         |
+| -------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| CI fails on lint/format          | Code style violations                     | Run `npm run format` locally and commit                                                            |
+| Deploy fails with "AccessDenied" | Insufficient IAM permissions              | Verify role policy allows CDK operations                                                           |
+| Deploy fails on KB provisioning  | Invalid or missing Pinecone credentials   | Verify `CDK_PINECONE_API_KEY` and `CDK_PINECONE_INDEX_HOST` in GitHub repository variables/secrets |
+| Teardown hangs                   | Resource has deletion protection          | Manually remove protection in AWS Console                                                          |
+| Node.js version mismatch         | `.nvmrc` file outdated                    | Update `.nvmrc` to desired version                                                                 |
+| CDK synthesis fails              | Infrastructure code errors                | Review CDK stack definitions in `packages/infra`                                                   |
+| Missing .env file                | Variables/secrets not properly configured | Verify all CDK\_\* variables and CDK_PINECONE_API_KEY are set in GitHub repository settings        |
 
 ---
 
