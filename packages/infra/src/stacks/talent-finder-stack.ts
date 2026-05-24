@@ -360,10 +360,11 @@ export class TalentFinderStack extends Stack {
     });
 
     // Grant document delete Lambda s3:DeleteObject scoped to the documents/* prefix
+    documentBucket.grantRead(documentDeleteLambda, 'documents/*');
     documentBucket.grantDelete(documentDeleteLambda, 'documents/*');
 
     // Grant document delete Lambda delete permissions to DynamoDB (scoped to the Documents table)
-    documentsTable.grantWriteData(documentDeleteLambda);
+    documentsTable.grantReadWriteData(documentDeleteLambda);
 
     // Wire document delete Lambda to DELETE /documents/:id route
     const documentDeleteIntegration = new HttpLambdaIntegration('DocumentDeleteIntegration', documentDeleteLambda);

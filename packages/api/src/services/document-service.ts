@@ -1,4 +1,4 @@
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 
 import { config } from '../utils/config';
 import { s3Client } from '../utils/s3-client';
@@ -31,16 +31,38 @@ export const DocumentService = {
         return null;
       }
 
-      // Delete the S3 object first
+      // Delete the entire S3 folder (prefix) for this document
       // If this fails, we abort before touching DynamoDB to prevent dangling records
-      const s3Key = `documents/${documentId}/${document.filename}`;
-      const deleteCommand = new DeleteObjectCommand({
-        Bucket: config.DOCUMENTS_BUCKET_NAME,
-        Key: s3Key,
-      });
+      const s3Prefix = `documents/${documentId}/`;
 
-      await s3Client.send(deleteCommand);
-      logger.debug({ documentId, s3Key }, '[DocumentService] - deleteDocument - S3 object deleted');
+      // List all objects in the folder
+      const listCommand = new ListObjectsV2Command({
+        Bucket: config.DOCUMENTS_BUCKET_NAME,
+        Prefix: s3Prefix,
+      });
+      logger.debug(
+        { command: listCommand.input },
+        '[DocumentService] - deleteDocument - listing S3 objects for deletion',
+      );
+
+      const listResponse = await s3Client.send(listCommand);
+
+      if (listResponse.Contents && listResponse.Contents.length > 0) {
+        // Delete all objects in the folder
+        const deleteCommand = new DeleteObjectsCommand({
+          Bucket: config.DOCUMENTS_BUCKET_NAME,
+          Delete: {
+            Objects: listResponse.Contents.map((obj) => ({ Key: obj.Key! })),
+          },
+        });
+        logger.debug({ command: deleteCommand.input }, '[DocumentService] - deleteDocument - deleting S3 objects');
+
+        await s3Client.send(deleteCommand);
+        logger.debug(
+          { documentId, s3Prefix, deletedItemCount: listResponse.Contents.length },
+          '[DocumentService] - deleteDocument - S3 folder deleted',
+        );
+      }
 
       // Delete the DynamoDB record
       await DocumentRepository.deleteById(documentId);
