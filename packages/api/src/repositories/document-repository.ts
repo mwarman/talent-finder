@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 import { config } from '../utils/config';
 import { dynamoClient } from '../utils/dynamo-client';
@@ -127,6 +127,26 @@ export const DocumentRepository = {
       logger.debug({ documentId, status }, '[DocumentRepository] < updateSyncStatus - status updated');
     } catch (error) {
       logger.error({ error, documentId, status }, '[DocumentRepository] < updateSyncStatus - failed to update status');
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a document record from DynamoDB by its documentId.
+   * @param documentId - The unique document identifier
+   * @throws Error if the DynamoDB delete operation fails
+   */
+  deleteById: async (documentId: string): Promise<void> => {
+    logger.debug({ documentId }, '[DocumentRepository] > deleteById');
+    try {
+      const command = new DeleteCommand({
+        TableName: config.DOCUMENTS_TABLE_NAME,
+        Key: { documentId },
+      });
+      await dynamoClient.send(command);
+      logger.debug({ documentId }, '[DocumentRepository] < deleteById - document deleted successfully');
+    } catch (error) {
+      logger.error({ error, documentId }, '[DocumentRepository] < deleteById - failed to delete document');
       throw error;
     }
   },
