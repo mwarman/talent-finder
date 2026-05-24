@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DeleteCommand: vi.fn(),
   GetCommand: vi.fn(),
   PutCommand: vi.fn(),
   ScanCommand: vi.fn(),
@@ -255,6 +256,34 @@ describe('document-repository', () => {
 
       // Act & Assert
       await expect(DocumentRepository.updateSyncStatus(documentId, status)).rejects.toThrow(error);
+    });
+  });
+
+  describe('deleteById', () => {
+    it('should delete a document from DynamoDB', async () => {
+      // Arrange
+      const documentId = 'doc-123';
+      vi.mocked(dynamoClient.send).mockResolvedValue({});
+
+      // Act
+      await DocumentRepository.deleteById(documentId);
+
+      // Assert
+      expect(DeleteCommand).toHaveBeenCalledOnce();
+      const callArgs = vi.mocked(DeleteCommand).mock.calls[0][0];
+      expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
+      expect(callArgs.Key).toEqual({ documentId });
+      expect(dynamoClient.send).toHaveBeenCalledOnce();
+    });
+
+    it('should throw an error if DynamoDB delete fails', async () => {
+      // Arrange
+      const documentId = 'doc-123';
+      const error = new Error('DynamoDB error');
+      vi.mocked(dynamoClient.send).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(DocumentRepository.deleteById(documentId)).rejects.toThrow(error);
     });
   });
 });
