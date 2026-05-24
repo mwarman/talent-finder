@@ -6,6 +6,10 @@ import { parseBody, ValidationError } from '../utils/validate';
 import { response } from '../utils/response';
 import { UploadService } from '../services/upload-service';
 
+/**
+ * Handler for generating a pre-signed URL for document upload.
+ * Validates the request body against the UploadRequestSchema, and returns the documentId and uploadUrl.
+ */
 const UploadRequestSchema = z.object({
   filename: z.string().min(1, 'filename must be a non-empty string'),
   contentType: z.enum(['application/pdf', 'text/plain']),
