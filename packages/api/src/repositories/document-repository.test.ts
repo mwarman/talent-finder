@@ -192,8 +192,8 @@ describe('document-repository', () => {
       const callArgs = vi.mocked(UpdateCommand).mock.calls[0][0];
       expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
       expect(callArgs.Key).toEqual({ documentId });
-      expect(callArgs.UpdateExpression).toBe('syncStatus = :status, updatedAt = :updatedAt');
-      expect(callArgs.ExpressionAttributeValues).toHaveProperty(':status', status);
+      expect(callArgs.UpdateExpression).toBe('SET syncStatus = :syncStatus, updatedAt = :updatedAt');
+      expect(callArgs.ExpressionAttributeValues).toHaveProperty(':syncStatus', status);
       expect(callArgs.ExpressionAttributeValues).toHaveProperty(':updatedAt');
     });
 
@@ -212,12 +212,12 @@ describe('document-repository', () => {
       const callArgs = vi.mocked(UpdateCommand).mock.calls[0][0];
       expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
       expect(callArgs.Key).toEqual({ documentId });
-      expect(callArgs.UpdateExpression).toContain('syncStatus = :status');
+      expect(callArgs.UpdateExpression).toContain('syncStatus = :syncStatus');
       expect(callArgs.UpdateExpression).toContain('updatedAt = :updatedAt');
       expect(callArgs.UpdateExpression).toContain('bedrockSyncJobId = :bedrockSyncJobId');
       expect(callArgs.ExpressionAttributeValues).toEqual(
         expect.objectContaining({
-          ':status': status,
+          ':syncStatus': status,
           ':bedrockSyncJobId': bedrockSyncJobId,
         }),
       );
@@ -236,12 +236,12 @@ describe('document-repository', () => {
       // Assert
       expect(UpdateCommand).toHaveBeenCalledOnce();
       const callArgs = vi.mocked(UpdateCommand).mock.calls[0][0];
-      expect(callArgs.UpdateExpression).toContain('syncStatus = :status');
+      expect(callArgs.UpdateExpression).toContain('syncStatus = :syncStatus');
       expect(callArgs.UpdateExpression).toContain('updatedAt = :updatedAt');
       expect(callArgs.UpdateExpression).toContain('syncError = :syncError');
       expect(callArgs.ExpressionAttributeValues).toEqual(
         expect.objectContaining({
-          ':status': status,
+          ':syncStatus': status,
           ':syncError': syncError,
         }),
       );
