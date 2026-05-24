@@ -26,7 +26,7 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     // If no job ID, return current status without polling
     if (!document.bedrockSyncJobId) {
-      logger.debug({ documentId }, '[SyncStatusHandler] - handle - no active sync job');
+      logger.info({ documentId }, '[SyncStatusHandler] < handle - no active sync job');
       return response.ok({
         syncStatus: document.syncStatus,
         updatedAt: document.updatedAt || document.uploadedAt,
