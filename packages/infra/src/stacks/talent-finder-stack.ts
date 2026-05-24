@@ -400,6 +400,15 @@ export class TalentFinderStack extends Stack {
     // Grant sync start Lambda read and write permissions to DynamoDB
     documentsTable.grantReadWriteData(syncStartLambda);
 
+    // Grant sync start Lambda permissions to call Bedrock StartIngestionJob API for the Knowledge Base
+    syncStartLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:StartIngestionJob', 'bedrock:AssociateThirdPartyKnowledgeBase'],
+        resources: [knowledgeBase.attrKnowledgeBaseArn],
+      }),
+    );
+
     // Wire sync start Lambda to POST /documents/{id}/sync route
     const syncStartIntegration = new HttpLambdaIntegration('SyncStartIntegration', syncStartLambda);
     httpApi.addRoutes({
@@ -432,8 +441,17 @@ export class TalentFinderStack extends Stack {
       },
     });
 
-    // Grant sync status Lambda read-only permissions to DynamoDB
-    documentsTable.grantReadData(syncStatusLambda);
+    // Grant sync status Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(syncStatusLambda);
+
+    // Grant sync status Lambda permissions to call Bedrock ListIngestionJobs and GetIngestionJob APIs for the Knowledge Base
+    syncStatusLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:ListIngestionJobs', 'bedrock:GetIngestionJob'],
+        resources: [knowledgeBase.attrKnowledgeBaseArn],
+      }),
+    );
 
     // Wire sync status Lambda to GET /documents/{id}/sync-status route
     const syncStatusIntegration = new HttpLambdaIntegration('SyncStatusIntegration', syncStatusLambda);
