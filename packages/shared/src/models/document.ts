@@ -25,7 +25,7 @@ export const DocumentSchema = z.object({
   filename: z.string().min(1),
   uploadedAt: z.iso.datetime(),
   contentType: z.enum(['application/pdf', 'text/plain']),
-  sizeBytes: z.number().int().nonnegative(),
+  sizeBytes: z.number().int().nonnegative().optional(),
   syncStatus: SyncStatusSchema,
   bedrockSyncJobId: z.string().min(1).optional(),
   syncError: z.string().optional(),

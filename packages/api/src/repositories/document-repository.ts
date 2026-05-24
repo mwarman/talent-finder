@@ -101,9 +101,9 @@ export const DocumentRepository = {
   ): Promise<void> => {
     logger.debug({ documentId, status, options }, '[DocumentRepository] > updateSyncStatus');
     try {
-      const updateExpressionParts = ['syncStatus = :status', 'updatedAt = :updatedAt'];
+      const updateExpressionParts = ['syncStatus = :syncStatus', 'updatedAt = :updatedAt'];
       const expressionAttributeValues: Record<string, string> = {
-        ':status': status,
+        ':syncStatus': status,
         ':updatedAt': new Date().toISOString(),
       };
 
@@ -120,9 +120,13 @@ export const DocumentRepository = {
       const command = new UpdateCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
         Key: { documentId },
-        UpdateExpression: updateExpressionParts.join(', '),
+        UpdateExpression: `SET ${updateExpressionParts.join(', ')}`,
         ExpressionAttributeValues: expressionAttributeValues,
       });
+      logger.debug(
+        { input: command.input },
+        '[DocumentRepository] - updateSyncStatus - sending update command to DynamoDB',
+      );
       await dynamoClient.send(command);
       logger.debug({ documentId, status }, '[DocumentRepository] < updateSyncStatus - status updated');
     } catch (error) {

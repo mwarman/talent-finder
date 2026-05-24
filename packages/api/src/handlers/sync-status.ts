@@ -30,6 +30,8 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
       return response.notFound('Not Found', `Document with id ${documentId} not found`);
     }
 
+    // TODO: If syncStatus is COMPLETED or FAILED, we could return the status immediately without polling Bedrock again until a new sync is initiated. This would reduce unnecessary API calls to Bedrock for completed/failed jobs.
+
     // If no job ID, return current status without polling
     if (!document.bedrockSyncJobId) {
       logger.info({ documentId }, '[SyncStatusHandler] < handle - no active sync job');

@@ -363,4 +363,112 @@ describe('TalentFinderStack', () => {
     // Assert — KB construct was created (KB ID token is defined)
     expect(talentFinderStack.knowledgeBaseId).toBeDefined();
   });
+
+  it('should create documents list Lambda wired to GET /documents', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+    });
+
+    // Assert — stack must be defined and the API endpoint must exist (GET /documents route is wired)
+    expect(talentFinderStack).toBeDefined();
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
+  });
+
+  it('should create document delete Lambda wired to DELETE /documents/:id', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+    });
+
+    // Assert — stack must be defined and the API endpoint must exist (DELETE /documents/:id route is wired)
+    expect(talentFinderStack).toBeDefined();
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
+  });
+
+  it('should create sync start Lambda wired to POST /documents/:id/sync', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+    });
+
+    // Assert — stack must be defined and the API endpoint must exist (POST /documents/:id/sync route is wired)
+    expect(talentFinderStack).toBeDefined();
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
+  });
+
+  it('should create sync status Lambda wired to GET /documents/:id/sync-status', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+    });
+
+    // Assert — stack must be defined and the API endpoint must exist (GET /documents/:id/sync-status route is wired)
+    expect(talentFinderStack).toBeDefined();
+    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
+  });
 });

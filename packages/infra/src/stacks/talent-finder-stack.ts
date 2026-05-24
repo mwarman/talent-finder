@@ -111,94 +111,6 @@ export class TalentFinderStack extends Stack {
       description: `Talent Finder API for ${props.envName} environment`,
     });
 
-    // Base Lambda environment variables for all functions in this stack
-    const baseLambdaEnvironment = {
-      LOG_LEVEL: props.logLevel,
-      LOG_FORMAT: props.logFormat,
-      LOG_ENABLED: props.logEnabled,
-      DOCUMENTS_BUCKET_NAME: documentBucket.bucketName,
-      DOCUMENTS_TABLE_NAME: documentsTable.tableName,
-    };
-
-    // Health Check Lambda Function using NodejsFunction for esbuild bundling
-    const healthLambda = new NodejsFunction(this, 'HealthFunction', {
-      functionName: `${props.appName}-health-${props.envName}`,
-      entry: path.join(__dirname, '../../../api/src/handlers/health.ts'),
-      handler: 'handle',
-      runtime: Runtime.NODEJS_24_X,
-      memorySize: 128,
-      timeout: Duration.seconds(6),
-      loggingFormat: LoggingFormat.JSON,
-      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: SystemLogLevel.INFO,
-      logGroup: new LogGroup(this, 'HealthFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${props.appName}-health-${props.envName}`,
-        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
-        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      }),
-      environment: baseLambdaEnvironment,
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
-
-    // Wire health Lambda to GET /health route
-    const healthIntegration = new HttpLambdaIntegration('HealthIntegration', healthLambda);
-    httpApi.addRoutes({
-      path: '/health',
-      methods: [HttpMethod.GET],
-      integration: healthIntegration,
-    });
-
-    // Upload Lambda Function — generates pre-signed S3 PUT URLs
-    const uploadLambda = new NodejsFunction(this, 'UploadFunction', {
-      functionName: `${props.appName}-upload-${props.envName}`,
-      entry: path.join(__dirname, '../../../api/src/handlers/upload.ts'),
-      handler: 'handle',
-      runtime: Runtime.NODEJS_24_X,
-      memorySize: 512,
-      timeout: Duration.seconds(10),
-      loggingFormat: LoggingFormat.JSON,
-      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: SystemLogLevel.INFO,
-      logGroup: new LogGroup(this, 'UploadFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${props.appName}-upload-${props.envName}`,
-        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
-        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      }),
-      environment: {
-        ...baseLambdaEnvironment,
-      },
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
-
-    // Grant upload Lambda s3:PutObject scoped to the documents/* prefix
-    documentBucket.grantPut(uploadLambda, 'documents/*');
-
-    // Grant upload Lambda read and write permissions to DynamoDB
-    documentsTable.grantReadWriteData(uploadLambda);
-
-    // Wire upload Lambda to POST /documents/upload-url route
-    const uploadIntegration = new HttpLambdaIntegration('UploadIntegration', uploadLambda);
-    httpApi.addRoutes({
-      path: '/documents/upload-url',
-      methods: [HttpMethod.POST],
-      integration: uploadIntegration,
-    });
-
-    // Store values for export
-    this.s3BucketName = documentBucket.bucketName;
-    this.secretArn = pineconeSecret.secretArn;
-    this.apiEndpointUrl = httpApi.url || '';
-
-    // --- Bedrock Knowledge Base ---
-
     // IAM execution role assumed by the Bedrock service to read documents and access the vector store
     const knowledgeBaseRole = new Role(this, 'KnowledgeBaseRole', {
       roleName: `${props.appName}-kb-role-${props.envName}`,
@@ -303,6 +215,256 @@ export class TalentFinderStack extends Stack {
     // Store KB values for export
     this.knowledgeBaseId = knowledgeBase.attrKnowledgeBaseId;
     this.dataSourceId = knowledgeBaseDataSource.attrDataSourceId;
+
+    // Base Lambda environment variables for all functions in this stack
+    // Includes Bedrock Knowledge Base configuration for vector-based document search
+    const baseLambdaEnvironment = {
+      LOG_LEVEL: props.logLevel,
+      LOG_FORMAT: props.logFormat,
+      LOG_ENABLED: props.logEnabled,
+      DOCUMENTS_BUCKET_NAME: documentBucket.bucketName,
+      DOCUMENTS_TABLE_NAME: documentsTable.tableName,
+      BEDROCK_KB_ID: knowledgeBase.attrKnowledgeBaseId,
+      BEDROCK_KB_DATA_SOURCE_ID: knowledgeBaseDataSource.attrDataSourceId,
+    };
+
+    // Health Check Lambda Function using NodejsFunction for esbuild bundling
+    const healthLambda = new NodejsFunction(this, 'HealthFunction', {
+      functionName: `${props.appName}-health-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/health.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: Duration.seconds(6),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'HealthFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-health-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Wire health Lambda to GET /health route
+    const healthIntegration = new HttpLambdaIntegration('HealthIntegration', healthLambda);
+    httpApi.addRoutes({
+      path: '/health',
+      methods: [HttpMethod.GET],
+      integration: healthIntegration,
+    });
+
+    // Upload Lambda Function — generates pre-signed S3 PUT URLs
+    const uploadLambda = new NodejsFunction(this, 'UploadFunction', {
+      functionName: `${props.appName}-upload-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/upload.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 512,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'UploadFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-upload-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: {
+        ...baseLambdaEnvironment,
+      },
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant upload Lambda s3:PutObject scoped to the documents/* prefix
+    documentBucket.grantPut(uploadLambda, 'documents/*');
+
+    // Grant upload Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(uploadLambda);
+
+    // Wire upload Lambda to POST /documents/upload-url route
+    const uploadIntegration = new HttpLambdaIntegration('UploadIntegration', uploadLambda);
+    httpApi.addRoutes({
+      path: '/documents/upload-url',
+      methods: [HttpMethod.POST],
+      integration: uploadIntegration,
+    });
+
+    // Documents List Lambda Function — retrieves all documents from DynamoDB
+    const documentsListLambda = new NodejsFunction(this, 'DocumentsListFunction', {
+      functionName: `${props.appName}-documents-list-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/documents-list.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'DocumentsListFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-documents-list-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant documents list Lambda read-only permissions to DynamoDB
+    documentsTable.grantReadData(documentsListLambda);
+
+    // Wire documents list Lambda to GET /documents route
+    const documentsListIntegration = new HttpLambdaIntegration('DocumentsListIntegration', documentsListLambda);
+    httpApi.addRoutes({
+      path: '/documents',
+      methods: [HttpMethod.GET],
+      integration: documentsListIntegration,
+    });
+
+    // Document Delete Lambda Function — deletes document from S3 and DynamoDB
+    const documentDeleteLambda = new NodejsFunction(this, 'DocumentDeleteFunction', {
+      functionName: `${props.appName}-document-delete-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/document-delete.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'DocumentDeleteFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-document-delete-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant document delete Lambda s3:DeleteObject scoped to the documents/* prefix
+    documentBucket.grantDelete(documentDeleteLambda, 'documents/*');
+
+    // Grant document delete Lambda delete permissions to DynamoDB (scoped to the Documents table)
+    documentsTable.grantWriteData(documentDeleteLambda);
+
+    // Wire document delete Lambda to DELETE /documents/:id route
+    const documentDeleteIntegration = new HttpLambdaIntegration('DocumentDeleteIntegration', documentDeleteLambda);
+    httpApi.addRoutes({
+      path: '/documents/{id}',
+      methods: [HttpMethod.DELETE],
+      integration: documentDeleteIntegration,
+    });
+
+    // Sync Start Lambda Function — initiates synchronization of a document to Bedrock Knowledge Base
+    const syncStartLambda = new NodejsFunction(this, 'SyncStartFunction', {
+      functionName: `${props.appName}-sync-start-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/sync-start.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'SyncStartFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-sync-start-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant sync start Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(syncStartLambda);
+
+    // Grant sync start Lambda permissions to call Bedrock StartIngestionJob API for the Knowledge Base
+    syncStartLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:StartIngestionJob', 'bedrock:AssociateThirdPartyKnowledgeBase'],
+        resources: [knowledgeBase.attrKnowledgeBaseArn],
+      }),
+    );
+
+    // Wire sync start Lambda to POST /documents/{id}/sync route
+    const syncStartIntegration = new HttpLambdaIntegration('SyncStartIntegration', syncStartLambda);
+    httpApi.addRoutes({
+      path: '/documents/{id}/sync',
+      methods: [HttpMethod.POST],
+      integration: syncStartIntegration,
+    });
+
+    // Sync Status Lambda Function — retrieves synchronization status of a document
+    const syncStatusLambda = new NodejsFunction(this, 'SyncStatusFunction', {
+      functionName: `${props.appName}-sync-status-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/sync-status.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'SyncStatusFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-sync-status-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant sync status Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(syncStatusLambda);
+
+    // Grant sync status Lambda permissions to call Bedrock ListIngestionJobs and GetIngestionJob APIs for the Knowledge Base
+    syncStatusLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:ListIngestionJobs', 'bedrock:GetIngestionJob'],
+        resources: [knowledgeBase.attrKnowledgeBaseArn],
+      }),
+    );
+
+    // Wire sync status Lambda to GET /documents/{id}/sync-status route
+    const syncStatusIntegration = new HttpLambdaIntegration('SyncStatusIntegration', syncStatusLambda);
+    httpApi.addRoutes({
+      path: '/documents/{id}/sync-status',
+      methods: [HttpMethod.GET],
+      integration: syncStatusIntegration,
+    });
+
+    // Store values for export
+    this.s3BucketName = documentBucket.bucketName;
+    this.secretArn = pineconeSecret.secretArn;
+    this.apiEndpointUrl = httpApi.url || '';
 
     // Stack outputs for consumption by feature stacks and end users
     this.exportValue(this.s3BucketName, { name: `TalentFinder-S3BucketName-${props.envName}` });
