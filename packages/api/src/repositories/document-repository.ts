@@ -87,21 +87,34 @@ export const DocumentRepository = {
   },
 
   /**
-   * Updates the sync status of a document record.
+   * Updates the sync status and optional metadata of a document record.
+   * Automatically sets updatedAt to the current timestamp.
    * @param documentId - The unique document identifier
-   * @param status - The new sync status (PENDING, IN_PROGRESS, COMPLETE, FAILED)
-   * @param jobId - Optional job identifier for tracking async processing jobs
+   * @param status - The new sync status
+   * @param options - Optional parameters: bedrockSyncJobId, syncError
    * @throws Error if the DynamoDB update operation fails
    */
-  updateSyncStatus: async (documentId: string, status: SyncStatus, jobId?: string): Promise<void> => {
-    logger.debug({ documentId, status, jobId }, '[DocumentRepository] > updateSyncStatus');
+  updateSyncStatus: async (
+    documentId: string,
+    status: SyncStatus,
+    options?: { bedrockSyncJobId?: string; syncError?: string },
+  ): Promise<void> => {
+    logger.debug({ documentId, status, options }, '[DocumentRepository] > updateSyncStatus');
     try {
-      const updateExpressionParts = ['syncStatus = :status'];
-      const expressionAttributeValues: Record<string, string> = { ':status': status };
+      const updateExpressionParts = ['syncStatus = :status', 'updatedAt = :updatedAt'];
+      const expressionAttributeValues: Record<string, string> = {
+        ':status': status,
+        ':updatedAt': new Date().toISOString(),
+      };
 
-      if (jobId) {
-        updateExpressionParts.push('jobId = :jobId');
-        expressionAttributeValues[':jobId'] = jobId;
+      if (options?.bedrockSyncJobId) {
+        updateExpressionParts.push('bedrockSyncJobId = :bedrockSyncJobId');
+        expressionAttributeValues[':bedrockSyncJobId'] = options.bedrockSyncJobId;
+      }
+
+      if (options?.syncError) {
+        updateExpressionParts.push('syncError = :syncError');
+        expressionAttributeValues[':syncError'] = options.syncError;
       }
 
       const command = new UpdateCommand({

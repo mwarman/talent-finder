@@ -19,6 +19,8 @@ describe('config', () => {
       process.env.LOG_FORMAT = 'json';
       process.env.DOCUMENTS_BUCKET_NAME = 'my-documents-bucket';
       process.env.DOCUMENTS_TABLE_NAME = 'my-documents-table';
+      process.env.BEDROCK_KB_ID = 'test-kb-id';
+      process.env.BEDROCK_KB_DATA_SOURCE_ID = 'test-data-source-id';
 
       // Act
       const { config } = await import('./config');
@@ -34,6 +36,9 @@ describe('config', () => {
       // Arrange
       delete process.env.LOG_LEVEL;
       process.env.DOCUMENTS_BUCKET_NAME = 'my-documents-bucket';
+      process.env.DOCUMENTS_TABLE_NAME = 'my-documents-table';
+      process.env.BEDROCK_KB_ID = 'test-kb-id';
+      process.env.BEDROCK_KB_DATA_SOURCE_ID = 'test-data-source-id';
 
       // Act
       const { config } = await import('./config');
@@ -46,6 +51,9 @@ describe('config', () => {
       // Arrange
       delete process.env.LOG_FORMAT;
       process.env.DOCUMENTS_BUCKET_NAME = 'my-documents-bucket';
+      process.env.DOCUMENTS_TABLE_NAME = 'my-documents-table';
+      process.env.BEDROCK_KB_ID = 'test-kb-id';
+      process.env.BEDROCK_KB_DATA_SOURCE_ID = 'test-data-source-id';
 
       // Act
       const { config } = await import('./config');

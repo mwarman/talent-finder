@@ -177,7 +177,7 @@ describe('document-repository', () => {
   });
 
   describe('updateSyncStatus', () => {
-    it('should update sync status without jobId', async () => {
+    it('should update sync status without options', async () => {
       // Arrange
       const documentId = 'doc-123';
       const status = SyncStatus.IN_PROGRESS;
@@ -191,30 +191,59 @@ describe('document-repository', () => {
       const callArgs = vi.mocked(UpdateCommand).mock.calls[0][0];
       expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
       expect(callArgs.Key).toEqual({ documentId });
-      expect(callArgs.UpdateExpression).toBe('syncStatus = :status');
-      expect(callArgs.ExpressionAttributeValues).toEqual({ ':status': status });
+      expect(callArgs.UpdateExpression).toBe('syncStatus = :status, updatedAt = :updatedAt');
+      expect(callArgs.ExpressionAttributeValues).toHaveProperty(':status', status);
+      expect(callArgs.ExpressionAttributeValues).toHaveProperty(':updatedAt');
     });
 
-    it('should update sync status with jobId', async () => {
+    it('should update sync status with bedrockSyncJobId option', async () => {
       // Arrange
       const documentId = 'doc-123';
       const status = SyncStatus.IN_PROGRESS;
-      const jobId = 'job-456';
+      const bedrockSyncJobId = 'job-456';
       vi.mocked(dynamoClient.send).mockResolvedValue({});
 
       // Act
-      await DocumentRepository.updateSyncStatus(documentId, status, jobId);
+      await DocumentRepository.updateSyncStatus(documentId, status, { bedrockSyncJobId });
 
       // Assert
       expect(UpdateCommand).toHaveBeenCalledOnce();
       const callArgs = vi.mocked(UpdateCommand).mock.calls[0][0];
       expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
       expect(callArgs.Key).toEqual({ documentId });
-      expect(callArgs.UpdateExpression).toBe('syncStatus = :status, jobId = :jobId');
-      expect(callArgs.ExpressionAttributeValues).toEqual({
-        ':status': status,
-        ':jobId': jobId,
-      });
+      expect(callArgs.UpdateExpression).toContain('syncStatus = :status');
+      expect(callArgs.UpdateExpression).toContain('updatedAt = :updatedAt');
+      expect(callArgs.UpdateExpression).toContain('bedrockSyncJobId = :bedrockSyncJobId');
+      expect(callArgs.ExpressionAttributeValues).toEqual(
+        expect.objectContaining({
+          ':status': status,
+          ':bedrockSyncJobId': bedrockSyncJobId,
+        }),
+      );
+    });
+
+    it('should update sync status with syncError option', async () => {
+      // Arrange
+      const documentId = 'doc-123';
+      const status = SyncStatus.FAILED;
+      const syncError = 'Permission denied';
+      vi.mocked(dynamoClient.send).mockResolvedValue({});
+
+      // Act
+      await DocumentRepository.updateSyncStatus(documentId, status, { syncError });
+
+      // Assert
+      expect(UpdateCommand).toHaveBeenCalledOnce();
+      const callArgs = vi.mocked(UpdateCommand).mock.calls[0][0];
+      expect(callArgs.UpdateExpression).toContain('syncStatus = :status');
+      expect(callArgs.UpdateExpression).toContain('updatedAt = :updatedAt');
+      expect(callArgs.UpdateExpression).toContain('syncError = :syncError');
+      expect(callArgs.ExpressionAttributeValues).toEqual(
+        expect.objectContaining({
+          ':status': status,
+          ':syncError': syncError,
+        }),
+      );
     });
 
     it('should throw an error if DynamoDB update fails', async () => {
