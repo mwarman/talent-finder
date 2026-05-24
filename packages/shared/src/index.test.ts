@@ -41,7 +41,7 @@ describe('shared package exports', () => {
       uploadedAt: '2026-05-22T10:00:00Z',
       contentType: 'application/pdf',
       sizeBytes: 1024,
-      syncStatus: SyncStatus.COMPLETE,
+      syncStatus: SyncStatus.COMPLETED,
     };
 
     const citation: Citation = {

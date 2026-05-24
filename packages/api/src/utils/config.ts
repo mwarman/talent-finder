@@ -25,6 +25,11 @@ const ConfigSchema = z.object({
     .string()
     .min(1)
     .describe('DOCUMENTS_TABLE_NAME - DynamoDB table name for document metadata (required)'),
+  BEDROCK_KB_ID: z.string().min(1).describe('BEDROCK_KB_ID - AWS Bedrock Knowledge Base ID (required)'),
+  BEDROCK_KB_DATA_SOURCE_ID: z
+    .string()
+    .min(1)
+    .describe('BEDROCK_KB_DATA_SOURCE_ID - AWS Bedrock Knowledge Base Data Source ID (required)'),
 });
 
 /**
