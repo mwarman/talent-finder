@@ -192,6 +192,149 @@ export class TalentFinderStack extends Stack {
       integration: uploadIntegration,
     });
 
+    // Documents List Lambda Function — retrieves all documents from DynamoDB
+    const documentsListLambda = new NodejsFunction(this, 'DocumentsListFunction', {
+      functionName: `${props.appName}-documents-list-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/documents-list.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'DocumentsListFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-documents-list-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant documents list Lambda read-only permissions to DynamoDB
+    documentsTable.grantReadData(documentsListLambda);
+
+    // Wire documents list Lambda to GET /documents route
+    const documentsListIntegration = new HttpLambdaIntegration('DocumentsListIntegration', documentsListLambda);
+    httpApi.addRoutes({
+      path: '/documents',
+      methods: [HttpMethod.GET],
+      integration: documentsListIntegration,
+    });
+
+    // Document Delete Lambda Function — deletes document from S3 and DynamoDB
+    const documentDeleteLambda = new NodejsFunction(this, 'DocumentDeleteFunction', {
+      functionName: `${props.appName}-document-delete-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/document-delete.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'DocumentDeleteFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-document-delete-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant document delete Lambda s3:DeleteObject scoped to the documents/* prefix
+    documentBucket.grantDelete(documentDeleteLambda, 'documents/*');
+
+    // Grant document delete Lambda delete permissions to DynamoDB (scoped to the Documents table)
+    documentsTable.grantWriteData(documentDeleteLambda);
+
+    // Wire document delete Lambda to DELETE /documents/:id route
+    const documentDeleteIntegration = new HttpLambdaIntegration('DocumentDeleteIntegration', documentDeleteLambda);
+    httpApi.addRoutes({
+      path: '/documents/{id}',
+      methods: [HttpMethod.DELETE],
+      integration: documentDeleteIntegration,
+    });
+
+    // Sync Start Lambda Function — initiates synchronization of a document to Bedrock Knowledge Base
+    const syncStartLambda = new NodejsFunction(this, 'SyncStartFunction', {
+      functionName: `${props.appName}-sync-start-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/sync-start.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'SyncStartFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-sync-start-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant sync start Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(syncStartLambda);
+
+    // Wire sync start Lambda to POST /documents/{id}/sync route
+    const syncStartIntegration = new HttpLambdaIntegration('SyncStartIntegration', syncStartLambda);
+    httpApi.addRoutes({
+      path: '/documents/{id}/sync',
+      methods: [HttpMethod.POST],
+      integration: syncStartIntegration,
+    });
+
+    // Sync Status Lambda Function — retrieves synchronization status of a document
+    const syncStatusLambda = new NodejsFunction(this, 'SyncStatusFunction', {
+      functionName: `${props.appName}-sync-status-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/sync-status.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'SyncStatusFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-sync-status-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant sync status Lambda read-only permissions to DynamoDB
+    documentsTable.grantReadData(syncStatusLambda);
+
+    // Wire sync status Lambda to GET /documents/{id}/sync-status route
+    const syncStatusIntegration = new HttpLambdaIntegration('SyncStatusIntegration', syncStatusLambda);
+    httpApi.addRoutes({
+      path: '/documents/{id}/sync-status',
+      methods: [HttpMethod.GET],
+      integration: syncStatusIntegration,
+    });
+
     // Store values for export
     this.s3BucketName = documentBucket.bucketName;
     this.secretArn = pineconeSecret.secretArn;
