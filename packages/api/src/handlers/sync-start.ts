@@ -5,6 +5,11 @@ import { response } from '../utils/response';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncService } from '../services/sync-service';
 
+/**
+ * Handler for starting the synchronization process for a document.
+ * Validates the documentId from the path parameters, checks if the document exists,
+ * and initiates the sync job using the SyncService. Returns the sync status and job ID.
+ */
 export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
   withRequestTracking(event, context);
   logger.info('[SyncStartHandler] > handle');

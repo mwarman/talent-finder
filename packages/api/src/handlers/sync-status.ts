@@ -5,6 +5,12 @@ import { response } from '../utils/response';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncService } from '../services/sync-service';
 
+/**
+ * Handler for retrieving the synchronization status of a document.
+ * Validates the documentId from the path parameters, checks if the document exists,
+ * and polls the sync status from the SyncService if a sync job is active.
+ * Returns the sync status and last updated time.
+ */
 export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
   withRequestTracking(event, context);
   logger.info('[SyncStatusHandler] > handle');
