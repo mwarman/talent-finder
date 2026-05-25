@@ -123,7 +123,7 @@ The Bedrock Knowledge Base uses Pinecone Serverless as its vector store. The ind
    | Setting      | Value                 | Notes                                                                    |
    | ------------ | --------------------- | ------------------------------------------------------------------------ |
    | Index name   | Any                   | Choose a descriptive name, e.g. `talent-finder-dev`                      |
-   | Dimensions   | **1536**              | Required for Amazon Titan Embeddings v2 (`amazon.titan-embed-text-v2:0`) |
+   | Dimensions   | **1024**              | Required for Amazon Titan Embeddings v2 (`amazon.titan-embed-text-v2:0`) |
    | Metric       | **cosine**            | Required for semantic similarity search                                  |
    | Cloud/Region | Match your AWS region | Reduces latency and egress costs                                         |
 
@@ -173,7 +173,7 @@ The Bedrock Knowledge Base uses Pinecone Serverless as its vector store. The ind
 
 ### Bedrock Knowledge Base
 
-- **Embedding Model:** Amazon Titan Embeddings v2 (`amazon.titan-embed-text-v2:0`) — produces 1536-dimensional vectors
+- **Embedding Model:** Amazon Titan Embeddings v2 (`amazon.titan-embed-text-v2:0`) — produces 1024-dimensional vectors
 - **Vector Store:** Pinecone Serverless (connection string from `CDK_PINECONE_INDEX_HOST`)
 - **IAM Execution Role:** Grants the Bedrock service `s3:GetObject`, `s3:ListBucket` (documents bucket), `secretsmanager:GetSecretValue` (Pinecone secret), and `bedrock:InvokeModel` (Titan Embeddings v2)
 - **Outputs:** `TalentFinder-KnowledgeBaseId-{env}`, `TalentFinder-DataSourceId-{env}`
