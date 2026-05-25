@@ -19,7 +19,7 @@ export interface RetrievedChunk {
  * @param chunks - The array of retrieved chunks from Bedrock KB
  * @returns An array of Citation objects with documentId, filename, and excerpt
  */
-export function parseCitations(responseText: string, chunks: RetrievedChunk[]): Citation[] {
+export const parseCitations = (responseText: string, chunks: RetrievedChunk[]): Citation[] => {
   // Extract the sources section from the response
   const sourcesMatch = responseText.match(/Sources:\s*\n([\s\S]*?)$/i);
   if (!sourcesMatch) {
@@ -54,4 +54,4 @@ export function parseCitations(responseText: string, chunks: RetrievedChunk[]): 
   }
 
   return citations;
-}
+};
