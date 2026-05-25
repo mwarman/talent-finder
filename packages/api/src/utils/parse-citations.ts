@@ -15,6 +15,8 @@ export interface RetrievedChunk {
  * Extracts the "Sources:" section from the end of the response and maps
  * source filenames back to their documentIds and excerpts from the retrieved chunks.
  *
+ * TODO: Consider using structured output from Claude in the future to avoid brittle text parsing and ensure more reliable citation extraction.
+ *
  * @param responseText - The full response text from Claude
  * @param chunks - The array of retrieved chunks from Bedrock KB
  * @returns An array of Citation objects with documentId, filename, and excerpt
