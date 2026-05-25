@@ -96,7 +96,7 @@ const invokeModel = async (prompt: string): Promise<string> => {
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify({
-        anthropic_version: 'bedrock-2023-06-01',
+        anthropic_version: 'bedrock-2023-05-31',
         max_tokens: config.BEDROCK_MAX_TOKENS,
         messages: [
           {
@@ -122,7 +122,10 @@ const invokeModel = async (prompt: string): Promise<string> => {
     return responseText;
   } catch (error) {
     // All model invocation errors (excluding throttling which is rare here) are treated as invocation errors
-    logger.error({ error }, '[QueryService] < invokeModel - failed to invoke model');
+    logger.error(
+      { error, errorMessage: error instanceof Error ? error.message : 'Unknown error during model invocation' },
+      '[QueryService] < invokeModel - failed to invoke model',
+    );
     throw new BedrockInvocationError(error instanceof Error ? error.message : 'Unknown error during model invocation');
   }
 };
@@ -171,6 +174,10 @@ export const QueryService = {
 
     // Step 2: Format chunks for prompt
     const retrievedChunksText = formatChunksForPrompt(chunks);
+
+    // TODO: If 0 chunks are retrieved, we could optionally skip the model invocation and return a default response
+    // indicating no information was found. For now, we will proceed with the prompt which will indicate no relevant
+    // documents found.
 
     // Step 3: Inject into prompt template
     const fullPrompt = CANDIDATE_MATCH_PROMPT.replace('{retrievedChunks}', retrievedChunksText).replace(

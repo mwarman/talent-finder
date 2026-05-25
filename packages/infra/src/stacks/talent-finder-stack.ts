@@ -34,6 +34,9 @@ interface TalentFinderStackProps extends StackProps {
   cloudFrontUrl: string;
   pineconeIndexHost: string;
   pineconeApiKey: string;
+  bedrockModelId: string;
+  bedrockRetrieveTopK: number;
+  bedrockMaxTokens: number;
 }
 
 /**
@@ -226,6 +229,9 @@ export class TalentFinderStack extends Stack {
       DOCUMENTS_TABLE_NAME: documentsTable.tableName,
       BEDROCK_KB_ID: knowledgeBase.attrKnowledgeBaseId,
       BEDROCK_KB_DATA_SOURCE_ID: knowledgeBaseDataSource.attrDataSourceId,
+      BEDROCK_MODEL_ID: props.bedrockModelId,
+      BEDROCK_RETRIEVE_TOP_K: props.bedrockRetrieveTopK.toString(),
+      BEDROCK_MAX_TOKENS: props.bedrockMaxTokens.toString(),
     };
 
     // Health Check Lambda Function using NodejsFunction for esbuild bundling
@@ -460,6 +466,62 @@ export class TalentFinderStack extends Stack {
       path: '/documents/{id}/sync-status',
       methods: [HttpMethod.GET],
       integration: syncStatusIntegration,
+    });
+
+    // Query Lambda Function — retrieves candidates from Knowledge Base and generates an answer via Claude
+    const queryLambda = new NodejsFunction(this, 'QueryFunction', {
+      functionName: `${props.appName}-query-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/query.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'QueryFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-query-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant query Lambda bedrock:Retrieve permissions scoped to the Knowledge Base
+    queryLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:Retrieve'],
+        resources: [knowledgeBase.attrKnowledgeBaseArn],
+      }),
+    );
+
+    // Grant query Lambda bedrock:InvokeModel permissions for Claude Sonnet geo-inference model
+    // The geo-inference model (us.anthropic.claude-sonnet-4-6) may be invoked in any of these regions
+    queryLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['bedrock:InvokeModel'],
+        resources: [
+          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0`,
+          `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
+          `arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
+          `arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
+        ],
+      }),
+    );
+
+    // Wire query Lambda to POST /query route
+    const queryIntegration = new HttpLambdaIntegration('QueryIntegration', queryLambda);
+    httpApi.addRoutes({
+      path: '/query',
+      methods: [HttpMethod.POST],
+      integration: queryIntegration,
     });
 
     // Store values for export

@@ -45,4 +45,7 @@ new TalentFinderStack(app, 'TalentFinderStack', {
   cloudFrontUrl: config.CDK_CLOUDFRONT_URL,
   pineconeIndexHost: config.CDK_PINECONE_INDEX_HOST,
   pineconeApiKey: config.CDK_PINECONE_API_KEY,
+  bedrockModelId: config.CDK_BEDROCK_MODEL_ID,
+  bedrockRetrieveTopK: config.CDK_BEDROCK_RETRIEVE_TOP_K,
+  bedrockMaxTokens: config.CDK_BEDROCK_MAX_TOKENS,
 });
