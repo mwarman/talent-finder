@@ -7,6 +7,8 @@ import { bedrockAgentRuntimeClient, bedrockRuntimeClient } from '../utils/bedroc
 import { logger } from '../utils/logger';
 import { parseCitations, RetrievedChunk } from '../utils/parse-citations';
 import { CANDIDATE_MATCH_PROMPT } from '../utils/prompts/candidate-match';
+import { BedrockThrottlingError } from '../utils/errors/bedrock-throttling-error';
+import { BedrockInvocationError } from '../utils/errors/bedrock-invocation-error';
 
 /**
  * Retrieves top-K chunks from Bedrock Knowledge Base.
@@ -54,6 +56,11 @@ const retrieveChunks = async (query: string): Promise<RetrievedChunk[]> => {
     logger.debug({ chunks: chunks.length }, '[QueryService] < retrieveChunks');
     return chunks;
   } catch (error) {
+    // Check if this is a ThrottlingException from Bedrock
+    if (error instanceof Error && error.name === 'ThrottlingException') {
+      logger.warn({ error, query }, '[QueryService] < retrieveChunks - bedrock throttling');
+      throw new BedrockThrottlingError();
+    }
     logger.error({ error, query }, '[QueryService] < retrieveChunks - failed to retrieve chunks');
     throw error;
   }
@@ -114,8 +121,9 @@ const invokeModel = async (prompt: string): Promise<string> => {
     logger.debug({ responseLength: responseText.length }, '[QueryService] < invokeModel');
     return responseText;
   } catch (error) {
+    // All model invocation errors (excluding throttling which is rare here) are treated as invocation errors
     logger.error({ error }, '[QueryService] < invokeModel - failed to invoke model');
-    throw error;
+    throw new BedrockInvocationError(error instanceof Error ? error.message : 'Unknown error during model invocation');
   }
 };
 
