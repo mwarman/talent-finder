@@ -48,6 +48,28 @@ const ConfigSchema = z.object({
     .describe(
       'CDK_PINECONE_API_KEY - Pinecone API key. Stored in Secrets Manager at deploy time so Bedrock can authenticate to the Pinecone vector store during Knowledge Base provisioning.',
     ),
+  CDK_BEDROCK_MODEL_ID: z
+    .string()
+    .default('us.anthropic.claude-sonnet-4-6')
+    .describe(
+      'CDK_BEDROCK_MODEL_ID - Bedrock model ID for query generation. Supports geo-inference models (e.g., "us.anthropic.claude-sonnet-4-6") which may be invoked in multiple regions. (optional, default: "us.anthropic.claude-sonnet-4-6")',
+    ),
+  CDK_BEDROCK_RETRIEVE_TOP_K: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5)
+    .describe(
+      'CDK_BEDROCK_RETRIEVE_TOP_K - Number of top chunks to retrieve from Knowledge Base for query context (optional, default: 5)',
+    ),
+  CDK_BEDROCK_MAX_TOKENS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(1500)
+    .describe(
+      'CDK_BEDROCK_MAX_TOKENS - Maximum tokens in model response for query generation (optional, default: 1500)',
+    ),
 });
 
 /**
