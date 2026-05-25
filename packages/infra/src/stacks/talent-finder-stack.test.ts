@@ -31,6 +31,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -62,6 +65,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -97,6 +103,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert - Check that secretArn is defined (may be a token or string)
@@ -125,6 +134,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -154,6 +166,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -183,6 +198,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -214,6 +232,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -243,6 +264,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert — stack must be defined and the API endpoint must exist (upload route is wired)
@@ -272,6 +296,9 @@ describe('TalentFinderStack', () => {
         pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
         pineconeApiKey: 'test-pinecone-api-key',
+        bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+        bedrockRetrieveTopK: 5,
+        bedrockMaxTokens: 1500,
       });
     }).not.toThrow();
   });
@@ -297,6 +324,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -326,6 +356,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert
@@ -358,6 +391,9 @@ describe('TalentFinderStack', () => {
       pineconeIndexHost,
 
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert — KB construct was created (KB ID token is defined)
@@ -384,6 +420,9 @@ describe('TalentFinderStack', () => {
       cloudFrontUrl: '*',
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert — stack must be defined and the API endpoint must exist (GET /documents route is wired)
@@ -411,6 +450,9 @@ describe('TalentFinderStack', () => {
       cloudFrontUrl: '*',
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert — stack must be defined and the API endpoint must exist (DELETE /documents/:id route is wired)
@@ -438,6 +480,9 @@ describe('TalentFinderStack', () => {
       cloudFrontUrl: '*',
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert — stack must be defined and the API endpoint must exist (POST /documents/:id/sync route is wired)
@@ -465,6 +510,9 @@ describe('TalentFinderStack', () => {
       cloudFrontUrl: '*',
       pineconeIndexHost: 'https://test-index.svc.pinecone.io',
       pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
     });
 
     // Assert — stack must be defined and the API endpoint must exist (GET /documents/:id/sync-status route is wired)
