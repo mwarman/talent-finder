@@ -87,6 +87,25 @@ vi.mock('../utils/parse-citations', () => ({
   }),
 }));
 
+// Mock error classes
+vi.mock('../utils/errors/bedrock-throttling-error', () => ({
+  BedrockThrottlingError: class extends Error {
+    constructor(message?: string) {
+      super(message || 'Bedrock service is temporarily throttled');
+      this.name = 'BedrockThrottlingError';
+    }
+  },
+}));
+
+vi.mock('../utils/errors/bedrock-invocation-error', () => ({
+  BedrockInvocationError: class extends Error {
+    constructor(message?: string) {
+      super(message || 'Failed to invoke Bedrock model');
+      this.name = 'BedrockInvocationError';
+    }
+  },
+}));
+
 import { QueryService } from './query-service';
 
 describe('QueryService', () => {
@@ -191,6 +210,26 @@ describe('QueryService', () => {
       await expect(QueryService.query(query)).rejects.toThrow('Bedrock KB retrieval failed');
     });
 
+    it('should throw BedrockThrottlingError if Bedrock returns ThrottlingException', async () => {
+      // Arrange
+      const query = 'Find candidates';
+      const throttlingError = new Error('Rate exceeded') as Error & { name: string };
+      throttlingError.name = 'ThrottlingException';
+
+      mockBedrockAgentSend.mockRejectedValueOnce(throttlingError);
+
+      // Act & Assert
+      try {
+        await QueryService.query(query);
+        expect.fail('Expected BedrockThrottlingError to be thrown');
+      } catch (error) {
+        // Check that it's a BedrockThrottlingError by name since mocks prevent instanceof checks
+        if (error instanceof Error) {
+          expect(error.name).toBe('BedrockThrottlingError');
+        }
+      }
+    });
+
     it('should throw error if model invocation fails', async () => {
       // Arrange
       const query = 'Find candidates';
@@ -213,7 +252,15 @@ describe('QueryService', () => {
       mockBedrockRuntimeSend.mockRejectedValueOnce(modelError);
 
       // Act & Assert
-      await expect(QueryService.query(query)).rejects.toThrow('Model invocation failed');
+      try {
+        await QueryService.query(query);
+        expect.fail('Expected BedrockInvocationError to be thrown');
+      } catch (error) {
+        // Check that it's a BedrockInvocationError by name since mocks prevent instanceof checks
+        if (error instanceof Error) {
+          expect(error.name).toBe('BedrockInvocationError');
+        }
+      }
     });
 
     it('should extract answer text before Sources section', async () => {
@@ -315,7 +362,15 @@ describe('QueryService', () => {
       });
 
       // Act & Assert
-      await expect(QueryService.query(query)).rejects.toThrow('No response body from model invocation');
+      try {
+        await QueryService.query(query);
+        expect.fail('Expected BedrockInvocationError to be thrown');
+      } catch (error) {
+        // Check that it's a BedrockInvocationError by name since mocks prevent instanceof checks
+        if (error instanceof Error) {
+          expect(error.name).toBe('BedrockInvocationError');
+        }
+      }
     });
   });
 });
