@@ -5,10 +5,19 @@ import { QueryResponse, QueryResponseSchema } from '@talent-finder/shared';
 import { config } from '../utils/config';
 import { bedrockAgentRuntimeClient, bedrockRuntimeClient } from '../utils/bedrock-client';
 import { logger } from '../utils/logger';
-import { RetrievedChunk } from '../utils/parse-citations';
+import { parseS3Uri } from '../utils/parse-s3-uri';
 import { CANDIDATE_MATCH_PROMPT } from '../utils/prompts/candidate-match';
 import { BedrockThrottlingError } from '../utils/errors/bedrock-throttling-error';
 import { BedrockInvocationError } from '../utils/errors/bedrock-invocation-error';
+
+/**
+ * Represents a retrieved chunk from the Bedrock Knowledge Base
+ */
+interface RetrievedChunk {
+  documentId: string;
+  filename: string;
+  excerpt: string;
+}
 
 /**
  * Retrieves top-K chunks from Bedrock Knowledge Base.
@@ -46,9 +55,11 @@ const retrieveChunks = async (query: string): Promise<RetrievedChunk[]> => {
 
     const chunks: RetrievedChunk[] = response.retrievalResults.map((result) => {
       logger.debug({ result }, '[QueryService] - retrieveChunks - processing result');
+      const sourceUri = (result.metadata?.['x-amz-bedrock-kb-source-uri'] as string) || '';
+      const { documentId, filename } = parseS3Uri(sourceUri);
       return {
-        documentId: (result.metadata?.['x-amzn-bedrock-knowledge-base-document-identifier'] as string) || 'unknown',
-        filename: (result.metadata?.['source'] as string) || 'unknown',
+        documentId,
+        filename,
         excerpt: result.content?.text || '',
       };
     });
@@ -78,7 +89,9 @@ const formatChunksForPrompt = (chunks: RetrievedChunk[]): string => {
     return 'No relevant documents found.';
   }
 
-  return chunks.map((chunk) => `Source: ${chunk.filename}\n\n${chunk.excerpt}`).join('\n\n---\n\n');
+  return chunks
+    .map((chunk) => `DocumentId: ${chunk.documentId}\nFilename: ${chunk.filename}\nExcerpt: ${chunk.excerpt}`)
+    .join('\n\n---\n\n');
 };
 
 /**

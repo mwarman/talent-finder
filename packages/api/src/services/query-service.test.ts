@@ -86,6 +86,29 @@ vi.mock('../utils/errors/bedrock-invocation-error', () => ({
   },
 }));
 
+// Mock parse-s3-uri utility
+vi.mock('../utils/parse-s3-uri', () => ({
+  parseS3Uri: (sourceUri?: string) => {
+    if (!sourceUri || typeof sourceUri !== 'string') {
+      return { documentId: 'unknown', filename: 'unknown' };
+    }
+    try {
+      const parts = sourceUri.replace(/^s3:\/\//, '').split('/');
+      if (parts.length < 4) {
+        return { documentId: 'unknown', filename: 'unknown' };
+      }
+      const filename = parts[parts.length - 1];
+      const documentId = parts[parts.length - 2];
+      if (!filename || !documentId) {
+        return { documentId: 'unknown', filename: 'unknown' };
+      }
+      return { documentId, filename };
+    } catch {
+      return { documentId: 'unknown', filename: 'unknown' };
+    }
+  },
+}));
+
 import { QueryService } from './query-service';
 
 describe('QueryService', () => {
@@ -102,24 +125,22 @@ describe('QueryService', () => {
       // Arrange
       const query = 'Find candidates with 5+ years of TypeScript experience';
 
-      // Mock agent send for retrieval
+      // Mock agent send for retrieval with S3 URI format
       mockBedrockAgentSend.mockResolvedValueOnce({
         retrievalResults: [
           {
-            documentId: 'doc-001',
             metadata: {
-              'x-amzn-bedrock-knowledge-base-document-identifier': 'doc-001',
-              source: 'john_doe_resume.pdf',
+              'x-amz-bedrock-kb-source-uri': 's3://bucket/documents/doc-uuid-001/john_doe_resume.pdf',
+              'x-amz-bedrock-kb-source-file-modality': 'TEXT',
             },
             content: {
               text: 'John has 10 years of TypeScript experience.',
             },
           },
           {
-            documentId: 'doc-002',
             metadata: {
-              'x-amzn-bedrock-knowledge-base-document-identifier': 'doc-002',
-              source: 'jane_smith_cv.pdf',
+              'x-amz-bedrock-kb-source-uri': 's3://bucket/documents/doc-uuid-002/jane_smith_cv.pdf',
+              'x-amz-bedrock-kb-source-file-modality': 'TEXT',
             },
             content: {
               text: 'Jane has 7 years of TypeScript experience.',
@@ -139,12 +160,12 @@ describe('QueryService', () => {
                     'Both John and Jane match your criteria. John has 10 years of TypeScript experience according to john_doe_resume.pdf, and Jane has 7 years according to jane_smith_cv.pdf.',
                   citations: [
                     {
-                      documentId: 'doc-001',
+                      documentId: 'doc-uuid-001',
                       filename: 'john_doe_resume.pdf',
                       excerpt: 'John has 10 years of TypeScript experience.',
                     },
                     {
-                      documentId: 'doc-002',
+                      documentId: 'doc-uuid-002',
                       filename: 'jane_smith_cv.pdf',
                       excerpt: 'Jane has 7 years of TypeScript experience.',
                     },
@@ -240,9 +261,8 @@ describe('QueryService', () => {
       mockBedrockAgentSend.mockResolvedValueOnce({
         retrievalResults: [
           {
-            documentId: 'doc-001',
             metadata: {
-              source: 'resume.pdf',
+              'x-amz-bedrock-kb-source-uri': 's3://bucket/documents/doc-uuid-001/resume.pdf',
             },
             content: {
               text: 'Resume content',
@@ -272,10 +292,8 @@ describe('QueryService', () => {
       mockBedrockAgentSend.mockResolvedValueOnce({
         retrievalResults: [
           {
-            documentId: 'doc-001',
             metadata: {
-              'x-amzn-bedrock-knowledge-base-document-identifier': 'doc-001',
-              source: 'resume.pdf',
+              'x-amz-bedrock-kb-source-uri': 's3://bucket/documents/doc-uuid-001/resume.pdf',
             },
             content: {
               text: 'Resume content',
@@ -294,7 +312,7 @@ describe('QueryService', () => {
                   answer: 'The candidate has relevant experience.',
                   citations: [
                     {
-                      documentId: 'doc-001',
+                      documentId: 'doc-uuid-001',
                       filename: 'resume.pdf',
                       excerpt: 'Resume content',
                     },
@@ -313,7 +331,7 @@ describe('QueryService', () => {
       expect(result.answer).toBe('The candidate has relevant experience.');
       expect(result.citations).toHaveLength(1);
       expect(result.citations[0]).toEqual({
-        documentId: 'doc-001',
+        documentId: 'doc-uuid-001',
         filename: 'resume.pdf',
         excerpt: 'Resume content',
       });
@@ -326,9 +344,8 @@ describe('QueryService', () => {
       mockBedrockAgentSend.mockResolvedValueOnce({
         retrievalResults: [
           {
-            documentId: 'doc-001',
             metadata: {
-              source: 'resume.pdf',
+              'x-amz-bedrock-kb-source-uri': 's3://bucket/documents/doc-uuid-001/resume.pdf',
             },
             content: {
               text: 'Resume content',
@@ -360,9 +377,8 @@ describe('QueryService', () => {
       mockBedrockAgentSend.mockResolvedValueOnce({
         retrievalResults: [
           {
-            documentId: 'doc-001',
             metadata: {
-              source: 'resume.pdf',
+              'x-amz-bedrock-kb-source-uri': 's3://bucket/documents/doc-uuid-001/resume.pdf',
             },
             content: {
               text: 'Resume content',
