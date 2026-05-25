@@ -163,7 +163,8 @@ export class TalentFinderStack extends Stack {
       knowledgeBaseConfiguration: {
         type: 'VECTOR',
         vectorKnowledgeBaseConfiguration: {
-          // Amazon Titan Embeddings v2 produces 1536-dimensional vectors
+          // Amazon Titan Embeddings V2 produces 1024-dimensional vectors by default
+          // Your Pinecone index MUST be created with dimension=1024, metric=cosine
           embeddingModelArn: `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
         },
       },
