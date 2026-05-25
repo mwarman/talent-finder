@@ -64,27 +64,7 @@ vi.mock('../utils/prompts/candidate-match', () => ({
 
 {retrievedChunks}
 
-Query: {userQuery}
-
-Sources:
-- {filename}`,
-}));
-
-// Mock parse-citations
-vi.mock('../utils/parse-citations', () => ({
-  parseCitations: vi.fn((responseText, chunks) => {
-    const citations = [];
-    for (const chunk of chunks) {
-      if (responseText.includes(chunk.filename)) {
-        citations.push({
-          documentId: chunk.documentId,
-          filename: chunk.filename,
-          excerpt: chunk.excerpt,
-        });
-      }
-    }
-    return citations;
-  }),
+Query: {userQuery}`,
 }));
 
 // Mock error classes
@@ -148,13 +128,28 @@ describe('QueryService', () => {
         ],
       });
 
-      // Mock runtime send for model invocation
+      // Mock runtime send for model invocation - return structured JSON output
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: new TextEncoder().encode(
           JSON.stringify({
             content: [
               {
-                text: 'John and Jane both match your criteria with john_doe_resume.pdf and jane_smith_cv.pdf.\n\nSources:\n- john_doe_resume.pdf\n- jane_smith_cv.pdf',
+                text: JSON.stringify({
+                  answer:
+                    'Both John and Jane match your criteria. John has 10 years of TypeScript experience according to john_doe_resume.pdf, and Jane has 7 years according to jane_smith_cv.pdf.',
+                  citations: [
+                    {
+                      documentId: 'doc-001',
+                      filename: 'john_doe_resume.pdf',
+                      excerpt: 'John has 10 years of TypeScript experience.',
+                    },
+                    {
+                      documentId: 'doc-002',
+                      filename: 'jane_smith_cv.pdf',
+                      excerpt: 'Jane has 7 years of TypeScript experience.',
+                    },
+                  ],
+                }),
               },
             ],
           }),
@@ -169,6 +164,9 @@ describe('QueryService', () => {
       expect(result).toHaveProperty('citations');
       expect(result.answer).toBeTruthy();
       expect(Array.isArray(result.citations)).toBe(true);
+      expect(result.citations).toHaveLength(2);
+      expect(result.citations[0].filename).toBe('john_doe_resume.pdf');
+      expect(result.citations[1].filename).toBe('jane_smith_cv.pdf');
     });
 
     it('should handle empty retrieval results', async () => {
@@ -179,12 +177,16 @@ describe('QueryService', () => {
         retrievalResults: [],
       });
 
+      // Mock structured JSON output with empty citations
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: new TextEncoder().encode(
           JSON.stringify({
             content: [
               {
-                text: 'No candidates match the criteria.\n\nSources:',
+                text: JSON.stringify({
+                  answer: 'No candidates match the criteria.',
+                  citations: [],
+                }),
               },
             ],
           }),
@@ -263,7 +265,7 @@ describe('QueryService', () => {
       }
     });
 
-    it('should extract answer text before Sources section', async () => {
+    it('should validate structured JSON output from model', async () => {
       // Arrange
       const query = 'Find candidates';
 
@@ -282,12 +284,22 @@ describe('QueryService', () => {
         ],
       });
 
+      // Mock structured JSON output that must be validated against schema
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: new TextEncoder().encode(
           JSON.stringify({
             content: [
               {
-                text: 'The candidates John and Jane match your requirements.\n\nSources:\n- resume.pdf',
+                text: JSON.stringify({
+                  answer: 'The candidate has relevant experience.',
+                  citations: [
+                    {
+                      documentId: 'doc-001',
+                      filename: 'resume.pdf',
+                      excerpt: 'Resume content',
+                    },
+                  ],
+                }),
               },
             ],
           }),
@@ -298,45 +310,13 @@ describe('QueryService', () => {
       const result = await QueryService.query(query);
 
       // Assert
-      expect(result.answer).toBe('The candidates John and Jane match your requirements.');
-    });
-
-    it('should handle response without Sources section', async () => {
-      // Arrange
-      const query = 'Find candidates';
-
-      mockBedrockAgentSend.mockResolvedValueOnce({
-        retrievalResults: [
-          {
-            documentId: 'doc-001',
-            metadata: {
-              source: 'resume.pdf',
-            },
-            content: {
-              text: 'Resume content',
-            },
-          },
-        ],
+      expect(result.answer).toBe('The candidate has relevant experience.');
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations[0]).toEqual({
+        documentId: 'doc-001',
+        filename: 'resume.pdf',
+        excerpt: 'Resume content',
       });
-
-      mockBedrockRuntimeSend.mockResolvedValueOnce({
-        body: new TextEncoder().encode(
-          JSON.stringify({
-            content: [
-              {
-                text: 'Answer without sources section',
-              },
-            ],
-          }),
-        ),
-      });
-
-      // Act
-      const result = await QueryService.query(query);
-
-      // Assert
-      expect(result.answer).toBe('Answer without sources section');
-      expect(result.citations).toEqual([]);
     });
 
     it('should throw error if response has no body', async () => {
@@ -359,6 +339,52 @@ describe('QueryService', () => {
 
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: null,
+      });
+
+      // Act & Assert
+      try {
+        await QueryService.query(query);
+        expect.fail('Expected BedrockInvocationError to be thrown');
+      } catch (error) {
+        // Check that it's a BedrockInvocationError by name since mocks prevent instanceof checks
+        if (error instanceof Error) {
+          expect(error.name).toBe('BedrockInvocationError');
+        }
+      }
+    });
+
+    it('should throw error if structured output JSON is invalid', async () => {
+      // Arrange
+      const query = 'Find candidates';
+
+      mockBedrockAgentSend.mockResolvedValueOnce({
+        retrievalResults: [
+          {
+            documentId: 'doc-001',
+            metadata: {
+              source: 'resume.pdf',
+            },
+            content: {
+              text: 'Resume content',
+            },
+          },
+        ],
+      });
+
+      // Mock response with invalid JSON structure (missing required fields)
+      mockBedrockRuntimeSend.mockResolvedValueOnce({
+        body: new TextEncoder().encode(
+          JSON.stringify({
+            content: [
+              {
+                text: JSON.stringify({
+                  answer: 'Answer without citations field',
+                  // Missing citations field
+                }),
+              },
+            ],
+          }),
+        ),
       });
 
       // Act & Assert

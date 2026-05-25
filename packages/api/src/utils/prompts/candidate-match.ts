@@ -49,11 +49,22 @@ Analyze the retrieved resume excerpts above to address the query. Apply the foll
 
 ## Output Format
 
-Structure your response as follows:
+Respond with a JSON object containing the following structure:
 
-1. A prose assessment that directly addresses each requirement in the query, with inline citations referencing document filenames for every claim made.
-2. A **Sources** section listing the document filenames that contributed supporting evidence, one per line.
+\`\`\`json
+{
+  "answer": "A prose assessment that directly addresses each requirement in the query, with inline citations referencing document filenames for every claim made.",
+  "citations": [
+    {
+      "documentId": "unique_doc_identifier",
+      "filename": "document_filename.pdf",
+      "excerpt": "The specific text excerpt from the document that supports a claim in the answer"
+    }
+  ]
+}
+\`\`\`
 
-Sources:
-- <filename>
-- <filename>`;
+Ensure that:
+- Every claim in the answer is supported by at least one citation with the corresponding document filename
+- Each citation excerpt directly supports one or more claims in the answer text
+- All extracted excerpts are verbatim from the retrieved documents`;

@@ -6,8 +6,8 @@ export const QueryRequestSchema = z.object({
 });
 
 export const QueryResponseSchema = z.object({
-  answer: z.string(),
-  citations: z.array(CitationSchema),
+  answer: z.string().describe('A prose assessment that addresses each requirement in the query with inline citations'),
+  citations: z.array(CitationSchema).describe('Array of citations from source documents that support the answer'),
 });
 
 export type QueryRequest = z.infer<typeof QueryRequestSchema>;

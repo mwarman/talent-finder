@@ -1,11 +1,11 @@
 import { InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { RetrieveCommand } from '@aws-sdk/client-bedrock-agent-runtime';
-import { QueryResponse } from '@talent-finder/shared';
+import { QueryResponse, QueryResponseSchema } from '@talent-finder/shared';
 
 import { config } from '../utils/config';
 import { bedrockAgentRuntimeClient, bedrockRuntimeClient } from '../utils/bedrock-client';
 import { logger } from '../utils/logger';
-import { parseCitations, RetrievedChunk } from '../utils/parse-citations';
+import { RetrievedChunk } from '../utils/parse-citations';
 import { CANDIDATE_MATCH_PROMPT } from '../utils/prompts/candidate-match';
 import { BedrockThrottlingError } from '../utils/errors/bedrock-throttling-error';
 import { BedrockInvocationError } from '../utils/errors/bedrock-invocation-error';
@@ -82,15 +82,18 @@ const formatChunksForPrompt = (chunks: RetrievedChunk[]): string => {
 };
 
 /**
- * Invokes Claude Sonnet 4.6 via Bedrock InvokeModel.
+ * Invokes Claude Sonnet 4.6 via Bedrock InvokeModel with structured output.
  *
  * @param prompt - The full prompt to send to Claude
- * @returns The model's response text
+ * @returns The parsed QueryResponse from the model's structured output
  */
-const invokeModel = async (prompt: string): Promise<string> => {
+const invokeModel = async (prompt: string): Promise<QueryResponse> => {
   logger.debug({}, '[QueryService] > invokeModel');
 
   try {
+    // Convert the Zod schema to JSON schema for Bedrock's structured output
+    const jsonSchema = QueryResponseSchema.toJSONSchema();
+
     const invokeCommand = new InvokeModelCommand({
       modelId: config.BEDROCK_MODEL_ID,
       contentType: 'application/json',
@@ -104,6 +107,12 @@ const invokeModel = async (prompt: string): Promise<string> => {
             content: prompt,
           },
         ],
+        output_config: {
+          format: {
+            type: 'json_schema',
+            schema: jsonSchema,
+          },
+        },
       }),
     });
     logger.debug({ input: invokeCommand.input }, '[QueryService] - invokeModel - sending invoke command');
@@ -116,10 +125,14 @@ const invokeModel = async (prompt: string): Promise<string> => {
     }
 
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-    const responseText = responseBody.content?.[0]?.text || '';
+    const responseContent = responseBody.content?.[0]?.text || '';
 
-    logger.debug({ responseLength: responseText.length }, '[QueryService] < invokeModel');
-    return responseText;
+    // Parse and validate the structured output against the schema
+    const parsedResponse = JSON.parse(responseContent);
+    const validatedResponse = QueryResponseSchema.parse(parsedResponse);
+
+    logger.debug({ citationCount: validatedResponse.citations.length }, '[QueryService] < invokeModel');
+    return validatedResponse;
   } catch (error) {
     // All model invocation errors (excluding throttling which is rare here) are treated as invocation errors
     logger.error(
@@ -131,35 +144,19 @@ const invokeModel = async (prompt: string): Promise<string> => {
 };
 
 /**
- * Extracts the answer text from the model response.
- * The answer is everything before the "Sources:" section.
- *
- * @param responseText - The full response from the model
- * @returns The answer portion of the response
- */
-const extractAnswerFromResponse = (responseText: string): string => {
-  const sourcesIndex = responseText.search(/Sources:/i);
-  if (sourcesIndex === -1) {
-    // No sources section found, return the entire response
-    return responseText.trim();
-  }
-  return responseText.substring(0, sourcesIndex).trim();
-};
-
-/**
  * QueryService provides methods for handling query operations: retrieval and generation.
- * Orchestrates the retrieve-then-generate pipeline using Bedrock KB and Claude.
+ * Orchestrates the retrieve-then-generate pipeline using Bedrock KB and Claude with structured output.
  */
 export const QueryService = {
   /**
-   * Executes a query against the Bedrock Knowledge Base and generates a response.
+   * Executes a query against the Bedrock Knowledge Base and generates a structured response.
    *
    * Steps:
    * 1. Retrieve top-K chunks from Bedrock KB using the query
    * 2. Format retrieved chunks into a string with source metadata
    * 3. Inject chunks and query into the prompt template
-   * 4. Invoke Claude Sonnet 4.6 via Bedrock InvokeModel
-   * 5. Parse the response to extract answer and citations
+   * 4. Invoke Claude Sonnet 4.6 via Bedrock InvokeModel with structured output
+   * 5. Return the parsed QueryResponse with validated answer and citations
    *
    * @param query - The user's query string
    * @returns QueryResponse with answer and citations
@@ -175,29 +172,18 @@ export const QueryService = {
     // Step 2: Format chunks for prompt
     const retrievedChunksText = formatChunksForPrompt(chunks);
 
-    // TODO: If 0 chunks are retrieved, we could optionally skip the model invocation and return a default response
-    // indicating no information was found. For now, we will proceed with the prompt which will indicate no relevant
-    // documents found.
-
     // Step 3: Inject into prompt template
     const fullPrompt = CANDIDATE_MATCH_PROMPT.replace('{retrievedChunks}', retrievedChunksText).replace(
       '{userQuery}',
       query,
     );
 
-    // Step 4: Invoke Claude
-    const responseText = await invokeModel(fullPrompt);
-    logger.debug({ responseLength: responseText.length }, '[QueryService] - query - model invoked');
+    // Step 4: Invoke Claude and get structured response
+    const response = await invokeModel(fullPrompt);
+    logger.debug({ citationCount: response.citations.length }, '[QueryService] - query - model invoked');
 
-    // Step 5: Parse response
-    const answer = extractAnswerFromResponse(responseText);
-    const citations = parseCitations(responseText, chunks);
+    logger.info({ citationCount: response.citations.length }, '[QueryService] < query');
 
-    logger.info({ citationCount: citations.length }, '[QueryService] < query');
-
-    return {
-      answer,
-      citations,
-    };
+    return response;
   },
 };

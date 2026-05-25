@@ -19,9 +19,11 @@ describe('CANDIDATE_MATCH_PROMPT', () => {
     expect(CANDIDATE_MATCH_PROMPT).toContain('{userQuery}');
   });
 
-  it('should include a Sources section for output structure guidance', () => {
+  it('should include JSON output format structure guidance', () => {
     // Arrange & Act & Assert
-    expect(CANDIDATE_MATCH_PROMPT).toContain('Sources:');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('JSON');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('"answer"');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('"citations"');
   });
 
   it('should instruct citation of resume documents by filename', () => {
