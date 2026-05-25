@@ -134,6 +134,7 @@ You are authorized to execute the following shell commands to validate your work
 - **Typing Mechanics:** Prefer `interface` for structural object definitions (props, state, payloads) and `type` for complex intersections, unions, or utility modifications.
 - **Value Handling:** Use optional chaining (`?.`) and nullish coalescing (`??`) over manual falsy checks. Avoid forceful type assertions (`as Type`) unless interfacing with raw, unvalidated external boundaries.
 - **Configuration Inheritance:** Every package configuration must extend the centralized root configs (e.g., `tsconfig.base.json`).
+- **Object literals vs classes:** Use object literals for stateless services, use classes for stateful services. Prefer object literals for simplicity and memory utilization.
 
 ### File & Directory Naming Conventions
 

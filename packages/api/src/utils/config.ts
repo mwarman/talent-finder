@@ -30,6 +30,22 @@ const ConfigSchema = z.object({
     .string()
     .min(1)
     .describe('BEDROCK_KB_DATA_SOURCE_ID - AWS Bedrock Knowledge Base Data Source ID (required)'),
+  BEDROCK_RETRIEVE_TOP_K: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5)
+    .describe('BEDROCK_RETRIEVE_TOP_K - Number of top chunks to retrieve from Knowledge Base (optional, default: 5)'),
+  BEDROCK_MODEL_ID: z
+    .string()
+    .default('claude-sonnet-4-6')
+    .describe('BEDROCK_MODEL_ID - Bedrock model ID for query generation (optional, default: "claude-sonnet-4-6")'),
+  BEDROCK_MAX_TOKENS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(1500)
+    .describe('BEDROCK_MAX_TOKENS - Maximum tokens in model response (optional, default: 1500)'),
 });
 
 /**
