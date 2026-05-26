@@ -87,7 +87,7 @@ Definition of Done)       coverage floors)         or unified scripts)
 │       │   │       ├── delete/
 │       │   │       ├── hooks/      # Feature-isolated API/State hooks (e.g., useGetTasks.ts)
 │       │   │       └── utils/      # Feature-isolated pure utility logic
-│       │   ├── index.css           # Global styles and Tailwind variables
+│       │   ├── globals.css         # Global styles and Tailwind variables
 │       │   └── main.tsx            # Web application entrypoint
 │       ├── package.json
 │       └── tsconfig.json
