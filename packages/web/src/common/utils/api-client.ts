@@ -1,35 +1,47 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+import { ApiError } from './api-error';
+import { config } from './config';
 
 /**
  * Creates an Axios instance with the base URL and default headers for API requests.
- * You can customize the instance by adding interceptors or modifying the configuration as needed.
+ * Configured with response interceptors to normalize API error responses.
  */
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: config.VITE_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add request interceptor if needed
-apiClient.interceptors.request.use(
-  (config) => {
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-// Add response interceptor if needed
+/**
+ * Response interceptor that transforms API error responses into ApiError instances.
+ * Handles both HTTP error responses (4xx, 5xx) and network errors.
+ */
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    return Promise.reject(error);
+  (error: AxiosError | Error) => {
+    // Check if this is an Axios error with a response
+    if (axios.isAxiosError(error) && error.response) {
+      const { status, data } = error.response;
+      const errorData = data as Record<string, unknown>;
+
+      // Transform the API error response to an ApiError instance
+      const message = typeof errorData?.message === 'string' ? errorData.message : 'An error occurred';
+      return Promise.reject(new ApiError(message, status));
+    }
+
+    // Handle network errors or other cases (no response from server)
+    if (axios.isAxiosError(error)) {
+      const message = error.message || 'Network error occurred';
+      return Promise.reject(new ApiError(message, 0));
+    }
+
+    // Fallback for non-Axios errors
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    return Promise.reject(new ApiError(message, 0));
   },
 );
 
