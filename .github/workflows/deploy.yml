@@ -55,9 +55,25 @@ jobs:
       - name: Synthesize AWS CDK infrastructure
         run: npm run cdk:synth --workspace packages/infra
 
-      - name: Deploy infrastructure
-        working-directory: packages/infra
-        run: npm run cdk:deploy --workspace packages/infra
+      - name: Deploy backend infrastructure
+        run: npm run cdk:deploy --workspace packages/infra BackendStack
+
+      - name: Retrieve API Gateway URL
+        id: get-api-url
+        run: |
+          API_URL=$(aws cloudformation describe-stacks --stack-name ${CDK_APP_NAME}-backend-${CDK_ENV_NAME} --query "Stacks[0].Outputs[?OutputKey=='APIGatewayUrl'].OutputValue" --output text)
+          echo "API_URL=$API_URL" >> $GITHUB_ENV
+
+      - name: Create web .env file
+        working-directory: ./packages/web
+        run: |
+          echo "VITE_API_BASE_URL=$API_URL" >> .env
+
+      - name: Build web application
+        run: npm run build --workspace packages/web
+
+      - name: Deploy frontend infrastructure
+        run: npm run cdk:deploy --workspace packages/infra FrontendStack
 
       - name: Clean up sensitive files
         if: always()
@@ -65,4 +81,5 @@ jobs:
           echo "🧹 Cleaning up sensitive files..."
           rm -f ./packages/infra/.env
           rm -rf ./packages/infra/cdk.out
+          rm -f ./packages/web/.env
           echo "✅ Sensitive files cleaned up"
