@@ -1,7 +1,8 @@
 import { App } from 'aws-cdk-lib';
 
 import { getConfig, getEnvironmentConfig, getTags } from './utils/config.js';
-import { TalentFinderStack } from './stacks/talent-finder-stack.js';
+import { BackendStack } from './stacks/backend-stack.js';
+import { FrontendStack } from './stacks/frontend-stack.js';
 
 /**
  * Main CDK Application Entrypoint
@@ -31,10 +32,10 @@ const tags: Record<string, string> = getTags(config);
 // Get CDK environment configuration (account and region) if provided
 const envConfig = getEnvironmentConfig(config);
 
-// Instantiate the base TalentFinder stack with tags
-new TalentFinderStack(app, 'TalentFinderStack', {
-  stackName: `${config.CDK_APP_NAME}-${config.CDK_ENV_NAME}`,
-  description: `Talent Finder application stack for ${config.CDK_ENV_NAME} environment`,
+// Instantiate the backend infrastructure stack with tags
+new BackendStack(app, 'BackendStack', {
+  stackName: `${config.CDK_APP_NAME}-backend-${config.CDK_ENV_NAME}`,
+  description: `Talent Finder backend infrastructure stack for ${config.CDK_ENV_NAME} environment`,
   tags,
   env: envConfig,
   appName: config.CDK_APP_NAME,
@@ -48,4 +49,17 @@ new TalentFinderStack(app, 'TalentFinderStack', {
   bedrockModelId: config.CDK_BEDROCK_MODEL_ID,
   bedrockRetrieveTopK: config.CDK_BEDROCK_RETRIEVE_TOP_K,
   bedrockMaxTokens: config.CDK_BEDROCK_MAX_TOKENS,
+});
+
+// Instantiate the Frontend stack for static hosting
+// Deploy this stack after the base stack and after building the web package with:
+//   export VITE_API_BASE_URL=$(aws cloudformation describe-stacks --stack-name <api-stack-name> --query 'Stacks[0].Outputs[?OutputKey==`TalentFinder-ApiEndpoint-*`].OutputValue' --output text)
+//   npm run build -w packages/web
+new FrontendStack(app, 'FrontendStack', {
+  stackName: `${config.CDK_APP_NAME}-frontend-${config.CDK_ENV_NAME}`,
+  description: `Talent Finder frontend static hosting stack for ${config.CDK_ENV_NAME} environment`,
+  tags,
+  env: envConfig,
+  appName: config.CDK_APP_NAME,
+  envName: config.CDK_ENV_NAME,
 });

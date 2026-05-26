@@ -1,3 +1,4 @@
 // Infrastructure as Code
-export { TalentFinderStack } from './stacks/talent-finder-stack';
+export { BackendStack } from './stacks/backend-stack';
+export { FrontendStack } from './stacks/frontend-stack';
 export { getConfig, getTags, getEnvironmentConfig, type Config } from './utils/config';
