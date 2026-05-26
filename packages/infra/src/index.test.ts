@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { TalentFinderStack, getConfig, getTags, getEnvironmentConfig } from './index';
+import { BackendStack, getConfig, getTags, getEnvironmentConfig } from './index';
 
 describe('infra package exports', () => {
-  it('should export TalentFinderStack', () => {
+  it('should export BackendStack', () => {
     // Arrange & Act & Assert
-    expect(TalentFinderStack).toBeDefined();
+    expect(BackendStack).toBeDefined();
   });
 
   it('should export getConfig', () => {

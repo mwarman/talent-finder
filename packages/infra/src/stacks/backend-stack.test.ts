@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
-import { TalentFinderStack } from './talent-finder-stack';
+import { Template } from 'aws-cdk-lib/assertions';
+import { BackendStack } from './backend-stack';
 
-describe('TalentFinderStack', () => {
+describe('BackendStack', () => {
   let parentStack: Stack;
 
   beforeEach(() => {
-    // Arrange: Create a parent stack context for the TalentFinderStack
+    // Arrange: Create a parent stack context for the BackendStack
     parentStack = new Stack();
   });
 
@@ -20,7 +21,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -38,9 +39,6 @@ describe('TalentFinderStack', () => {
 
     // Assert
     expect(talentFinderStack).toBeDefined();
-    expect(talentFinderStack.s3BucketName).toBeDefined();
-    expect(talentFinderStack.secretArn).toBeDefined();
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should export stack outputs with environment-specific names', () => {
@@ -51,10 +49,9 @@ describe('TalentFinderStack', () => {
       OU: 'engineering',
       Owner: 'team-backend',
     };
-    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
 
     // Act
-    new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'prod',
@@ -71,46 +68,11 @@ describe('TalentFinderStack', () => {
     });
 
     // Assert
-    expect(exportSpy).toHaveBeenCalled();
-    const calls = exportSpy.mock.calls;
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-S3BucketName-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-SecretArn-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-KnowledgeBaseId-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-DataSourceId-prod')).toBe(true);
-
-    exportSpy.mockRestore();
-  });
-
-  it('should create secret with environment-specific name', () => {
-    // Arrange
-    const tags = {
-      App: 'talent-finder',
-      Env: 'dev',
-      OU: 'engineering',
-      Owner: 'team-backend',
-    };
-
-    // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
-      tags,
-      appName: 'talent-finder',
-      envName: 'dev',
-      logLevel: 'debug',
-      logFormat: 'json',
-      logEnabled: 'true',
-      cloudFrontUrl: '*',
-      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
-
-      pineconeApiKey: 'test-pinecone-api-key',
-      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
-      bedrockRetrieveTopK: 5,
-      bedrockMaxTokens: 1500,
+    const template = Template.fromStack(stack);
+    template.hasOutput('APIGatewayUrl', {
+      Export: { Name: 'talent-finder-APIGatewayUrl-prod' },
+      Description: 'HTTP API Gateway endpoint URL',
     });
-
-    // Assert - Check that secretArn is defined (may be a token or string)
-    expect(talentFinderStack.secretArn).toBeDefined();
-    expect(typeof talentFinderStack.secretArn).toMatch(/string|object/);
   });
 
   it('should accept tags in stack properties', () => {
@@ -123,7 +85,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const stack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -141,39 +103,6 @@ describe('TalentFinderStack', () => {
 
     // Assert
     expect(stack).toBeDefined();
-    expect(stack.s3BucketName).toBeDefined();
-    expect(stack.secretArn).toBeDefined();
-  });
-
-  it('should create HTTP API Gateway', () => {
-    // Arrange
-    const tags = {
-      App: 'talent-finder',
-      Env: 'dev',
-      OU: 'engineering',
-      Owner: 'team-backend',
-    };
-
-    // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
-      tags,
-      appName: 'talent-finder',
-      envName: 'dev',
-      logLevel: 'debug',
-      logFormat: 'json',
-      logEnabled: 'true',
-      cloudFrontUrl: '*',
-      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
-
-      pineconeApiKey: 'test-pinecone-api-key',
-      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
-      bedrockRetrieveTopK: 5,
-      bedrockMaxTokens: 1500,
-    });
-
-    // Assert
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
-    expect(typeof talentFinderStack.apiEndpointUrl).toMatch(/string|object/);
   });
 
   it('should export API endpoint URL with environment-specific name', () => {
@@ -184,10 +113,9 @@ describe('TalentFinderStack', () => {
       OU: 'engineering',
       Owner: 'team-backend',
     };
-    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
 
     // Act
-    new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'prod',
@@ -204,11 +132,11 @@ describe('TalentFinderStack', () => {
     });
 
     // Assert
-    expect(exportSpy).toHaveBeenCalled();
-    const calls = exportSpy.mock.calls;
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
-
-    exportSpy.mockRestore();
+    const template = Template.fromStack(stack);
+    template.hasOutput('APIGatewayUrl', {
+      Export: { Name: 'talent-finder-APIGatewayUrl-prod' },
+      Description: 'HTTP API Gateway endpoint URL',
+    });
   });
 
   it('should pass log configuration to Lambda environment variables', () => {
@@ -221,7 +149,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -239,8 +167,6 @@ describe('TalentFinderStack', () => {
 
     // Assert
     expect(talentFinderStack).toBeDefined();
-    // The Lambda function should be created with the provided log configuration
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should create upload Lambda wired to POST /documents/upload-url', () => {
@@ -253,7 +179,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -271,7 +197,6 @@ describe('TalentFinderStack', () => {
 
     // Assert — stack must be defined and the API endpoint must exist (upload route is wired)
     expect(talentFinderStack).toBeDefined();
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should create DynamoDB table for document metadata', () => {
@@ -285,7 +210,7 @@ describe('TalentFinderStack', () => {
 
     // Act & Assert — Stack instantiation succeeds with DynamoDB configuration
     expect(() => {
-      new TalentFinderStack(parentStack, 'TalentFinderStack', {
+      new BackendStack(parentStack, 'BackendStack', {
         tags,
         appName: 'talent-finder',
         envName: 'dev',
@@ -313,7 +238,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -342,10 +267,9 @@ describe('TalentFinderStack', () => {
       OU: 'engineering',
       Owner: 'team-backend',
     };
-    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
 
     // Act
-    new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -362,11 +286,15 @@ describe('TalentFinderStack', () => {
     });
 
     // Assert
-    const calls = exportSpy.mock.calls;
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-KnowledgeBaseId-dev')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-DataSourceId-dev')).toBe(true);
-
-    exportSpy.mockRestore();
+    const template = Template.fromStack(stack);
+    template.hasOutput('KnowledgeBaseId', {
+      Export: { Name: 'talent-finder-KnowledgeBaseId-dev' },
+      Description: 'Bedrock Knowledge Base ID',
+    });
+    template.hasOutput('DataSourceId', {
+      Export: { Name: 'talent-finder-DataSourceId-dev' },
+      Description: 'Bedrock Knowledge Base Data Source ID',
+    });
   });
 
   it('should use the pineconeIndexHost prop as the Pinecone connection string', () => {
@@ -380,7 +308,7 @@ describe('TalentFinderStack', () => {
     const pineconeIndexHost = 'https://custom-index.svc.pinecone.io';
 
     // Act — stack construction succeeds with the provided Pinecone host
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -410,7 +338,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -427,7 +355,6 @@ describe('TalentFinderStack', () => {
 
     // Assert — stack must be defined and the API endpoint must exist (GET /documents route is wired)
     expect(talentFinderStack).toBeDefined();
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should create document delete Lambda wired to DELETE /documents/:id', () => {
@@ -440,7 +367,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -457,7 +384,6 @@ describe('TalentFinderStack', () => {
 
     // Assert — stack must be defined and the API endpoint must exist (DELETE /documents/:id route is wired)
     expect(talentFinderStack).toBeDefined();
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should create sync start Lambda wired to POST /documents/:id/sync', () => {
@@ -470,7 +396,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -487,7 +413,6 @@ describe('TalentFinderStack', () => {
 
     // Assert — stack must be defined and the API endpoint must exist (POST /documents/:id/sync route is wired)
     expect(talentFinderStack).toBeDefined();
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 
   it('should create sync status Lambda wired to GET /documents/:id/sync-status', () => {
@@ -500,7 +425,7 @@ describe('TalentFinderStack', () => {
     };
 
     // Act
-    const talentFinderStack = new TalentFinderStack(parentStack, 'TalentFinderStack', {
+    const talentFinderStack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -517,6 +442,5 @@ describe('TalentFinderStack', () => {
 
     // Assert — stack must be defined and the API endpoint must exist (GET /documents/:id/sync-status route is wired)
     expect(talentFinderStack).toBeDefined();
-    expect(talentFinderStack.apiEndpointUrl).toBeDefined();
   });
 });

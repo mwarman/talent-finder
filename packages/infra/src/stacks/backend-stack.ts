@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Stack, StackProps, Duration, RemovalPolicy, SecretValue } from 'aws-cdk-lib';
+import { Stack, StackProps, Duration, RemovalPolicy, SecretValue, CfnOutput } from 'aws-cdk-lib';
 import { Bucket, BucketEncryption, CorsRule, HttpMethods, StorageClass } from 'aws-cdk-lib/aws-s3';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -16,7 +16,7 @@ import { Construct } from 'constructs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * TalentFinderStackProps extends StackProps to include application-specific properties
+ * BackendStackProps extends StackProps to include application-specific properties
  * - appName: The name of the application (e.g., "talent-finder")
  * - envName: The environment identifier (e.g., "dev", "prod")
  * - logLevel: Lambda logging level
@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * - pineconeIndexHost: Pinecone Serverless index host URL for the Bedrock Knowledge Base
  * - pineconeApiKey: Pinecone API key written into Secrets Manager at deploy time
  */
-interface TalentFinderStackProps extends StackProps {
+interface BackendStackProps extends StackProps {
   appName: string;
   envName: string;
   logLevel: string;
@@ -40,7 +40,7 @@ interface TalentFinderStackProps extends StackProps {
 }
 
 /**
- * Base Talent Finder Stack
+ * Backend Talent Finder Stack
  * Provisions foundational AWS resources:
  * - S3 bucket for document corpus (with versioning, encryption, lifecycle rules)
  * - DynamoDB table for document metadata (with documentId partition key, PAY_PER_REQUEST billing)
@@ -50,14 +50,11 @@ interface TalentFinderStackProps extends StackProps {
  * - Base Lambda IAM execution role with CloudWatch Logs permissions
  * - Health check Lambda function wired to GET /health route
  */
-export class TalentFinderStack extends Stack {
-  public readonly s3BucketName: string;
-  public readonly secretArn: string;
-  public readonly apiEndpointUrl: string;
+export class BackendStack extends Stack {
   public readonly knowledgeBaseId: string;
   public readonly dataSourceId: string;
 
-  constructor(scope: Construct, id: string, props: TalentFinderStackProps) {
+  constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
     // S3 CORS rule — permits PUT uploads from the CloudFront distribution only
@@ -525,16 +522,23 @@ export class TalentFinderStack extends Stack {
       integration: queryIntegration,
     });
 
-    // Store values for export
-    this.s3BucketName = documentBucket.bucketName;
-    this.secretArn = pineconeSecret.secretArn;
-    this.apiEndpointUrl = httpApi.url || '';
+    // Stack outputs
+    new CfnOutput(this, 'APIGatewayUrl', {
+      value: httpApi.url || '',
+      description: 'HTTP API Gateway endpoint URL',
+      exportName: `${props.appName}-APIGatewayUrl-${props.envName}`,
+    });
 
-    // Stack outputs for consumption by feature stacks and end users
-    this.exportValue(this.s3BucketName, { name: `TalentFinder-S3BucketName-${props.envName}` });
-    this.exportValue(this.secretArn, { name: `TalentFinder-SecretArn-${props.envName}` });
-    this.exportValue(this.apiEndpointUrl, { name: `TalentFinder-ApiEndpoint-${props.envName}` });
-    this.exportValue(this.knowledgeBaseId, { name: `TalentFinder-KnowledgeBaseId-${props.envName}` });
-    this.exportValue(this.dataSourceId, { name: `TalentFinder-DataSourceId-${props.envName}` });
+    new CfnOutput(this, 'KnowledgeBaseId', {
+      value: this.knowledgeBaseId,
+      description: 'Bedrock Knowledge Base ID',
+      exportName: `${props.appName}-KnowledgeBaseId-${props.envName}`,
+    });
+
+    new CfnOutput(this, 'DataSourceId', {
+      value: this.dataSourceId,
+      description: 'Bedrock Knowledge Base Data Source ID',
+      exportName: `${props.appName}-DataSourceId-${props.envName}`,
+    });
   }
 }

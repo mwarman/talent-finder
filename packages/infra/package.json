@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "cdk": "cdk",
-    "cdk:deploy": "cdk deploy --all --require-approval never",
+    "cdk:deploy": "cdk deploy --require-approval never",
     "cdk:destroy": "cdk destroy --all --force",
     "precdk:synth": "npm run build",
     "cdk:synth": "cdk synth",
