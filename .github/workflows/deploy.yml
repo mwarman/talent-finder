@@ -61,7 +61,7 @@ jobs:
       - name: Retrieve API Gateway URL
         id: get-api-url
         run: |
-          API_URL=$(aws cloudformation describe-stacks --stack-name ${CDK_APP_NAME}-backend-${CDK_ENV_NAME} --query "Stacks[0].Outputs[?OutputKey=='APIGatewayUrl'].OutputValue" --output text)
+          API_URL=$(aws cloudformation describe-stacks --stack-name ${{ vars.CDK_APP_NAME }}-backend-${{ vars.CDK_ENV_NAME }} --query "Stacks[0].Outputs[?OutputKey=='APIGatewayUrl'].OutputValue" --output text)
           echo "API_URL=$API_URL" >> $GITHUB_ENV
 
       - name: Create web .env file
