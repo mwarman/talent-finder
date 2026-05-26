@@ -23,6 +23,8 @@
     "pino-lambda": "4.4.1"
   },
   "devDependencies": {
-    "@types/aws-lambda": "8.10.161"
+    "@types/aws-lambda": "8.10.161",
+    "@vitest/coverage-v8": "4.1.7",
+    "vitest": "4.1.7"
   }
 }

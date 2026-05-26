@@ -9,5 +9,9 @@
     "clean": "rimraf coverage dist",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.7",
+    "vitest": "4.1.7"
   }
 }
