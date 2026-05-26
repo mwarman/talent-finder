@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Stack, StackProps, Duration, RemovalPolicy, SecretValue } from 'aws-cdk-lib';
+import { Stack, StackProps, Duration, RemovalPolicy, SecretValue, CfnOutput } from 'aws-cdk-lib';
 import { Bucket, BucketEncryption, CorsRule, HttpMethods, StorageClass } from 'aws-cdk-lib/aws-s3';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -51,9 +51,6 @@ interface BackendStackProps extends StackProps {
  * - Health check Lambda function wired to GET /health route
  */
 export class BackendStack extends Stack {
-  public readonly s3BucketName: string;
-  public readonly secretArn: string;
-  public readonly apiEndpointUrl: string;
   public readonly knowledgeBaseId: string;
   public readonly dataSourceId: string;
 
@@ -525,16 +522,11 @@ export class BackendStack extends Stack {
       integration: queryIntegration,
     });
 
-    // Store values for export
-    this.s3BucketName = documentBucket.bucketName;
-    this.secretArn = pineconeSecret.secretArn;
-    this.apiEndpointUrl = httpApi.url || '';
-
-    // Stack outputs for consumption by feature stacks and end users
-    this.exportValue(this.s3BucketName, { name: `TalentFinder-S3BucketName-${props.envName}` });
-    this.exportValue(this.secretArn, { name: `TalentFinder-SecretArn-${props.envName}` });
-    this.exportValue(this.apiEndpointUrl, { name: `TalentFinder-ApiEndpoint-${props.envName}` });
-    this.exportValue(this.knowledgeBaseId, { name: `TalentFinder-KnowledgeBaseId-${props.envName}` });
-    this.exportValue(this.dataSourceId, { name: `TalentFinder-DataSourceId-${props.envName}` });
+    // Stack outputs
+    new CfnOutput(this, 'APIGatewayUrl', {
+      value: httpApi.url || '',
+      description: 'HTTP API Gateway endpoint URL',
+      exportName: `${props.appName}-APIGatewayUrl-${props.envName}`,
+    });
   }
 }
