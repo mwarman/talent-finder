@@ -528,5 +528,17 @@ export class BackendStack extends Stack {
       description: 'HTTP API Gateway endpoint URL',
       exportName: `${props.appName}-APIGatewayUrl-${props.envName}`,
     });
+
+    new CfnOutput(this, 'KnowledgeBaseId', {
+      value: this.knowledgeBaseId,
+      description: 'Bedrock Knowledge Base ID',
+      exportName: `${props.appName}-KnowledgeBaseId-${props.envName}`,
+    });
+
+    new CfnOutput(this, 'DataSourceId', {
+      value: this.dataSourceId,
+      description: 'Bedrock Knowledge Base Data Source ID',
+      exportName: `${props.appName}-DataSourceId-${props.envName}`,
+    });
   }
 }

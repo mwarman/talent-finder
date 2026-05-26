@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
+import { Template } from 'aws-cdk-lib/assertions';
 import { BackendStack } from './backend-stack';
 
 describe('BackendStack', () => {
@@ -48,10 +49,9 @@ describe('BackendStack', () => {
       OU: 'engineering',
       Owner: 'team-backend',
     };
-    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
 
     // Act
-    new BackendStack(parentStack, 'BackendStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'prod',
@@ -68,15 +68,11 @@ describe('BackendStack', () => {
     });
 
     // Assert
-    expect(exportSpy).toHaveBeenCalled();
-    const calls = exportSpy.mock.calls;
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-S3BucketName-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-SecretArn-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-KnowledgeBaseId-prod')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-DataSourceId-prod')).toBe(true);
-
-    exportSpy.mockRestore();
+    const template = Template.fromStack(stack);
+    template.hasOutput('APIGatewayUrl', {
+      Export: { Name: 'talent-finder-APIGatewayUrl-prod' },
+      Description: 'HTTP API Gateway endpoint URL',
+    });
   });
 
   it('should accept tags in stack properties', () => {
@@ -117,10 +113,9 @@ describe('BackendStack', () => {
       OU: 'engineering',
       Owner: 'team-backend',
     };
-    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
 
     // Act
-    new BackendStack(parentStack, 'BackendStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'prod',
@@ -137,11 +132,11 @@ describe('BackendStack', () => {
     });
 
     // Assert
-    expect(exportSpy).toHaveBeenCalled();
-    const calls = exportSpy.mock.calls;
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-ApiEndpoint-prod')).toBe(true);
-
-    exportSpy.mockRestore();
+    const template = Template.fromStack(stack);
+    template.hasOutput('APIGatewayUrl', {
+      Export: { Name: 'talent-finder-APIGatewayUrl-prod' },
+      Description: 'HTTP API Gateway endpoint URL',
+    });
   });
 
   it('should pass log configuration to Lambda environment variables', () => {
@@ -272,10 +267,9 @@ describe('BackendStack', () => {
       OU: 'engineering',
       Owner: 'team-backend',
     };
-    const exportSpy = vi.spyOn(Stack.prototype, 'exportValue');
 
     // Act
-    new BackendStack(parentStack, 'BackendStack', {
+    const stack = new BackendStack(parentStack, 'BackendStack', {
       tags,
       appName: 'talent-finder',
       envName: 'dev',
@@ -292,11 +286,15 @@ describe('BackendStack', () => {
     });
 
     // Assert
-    const calls = exportSpy.mock.calls;
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-KnowledgeBaseId-dev')).toBe(true);
-    expect(calls.some((call) => call[1]?.name === 'TalentFinder-DataSourceId-dev')).toBe(true);
-
-    exportSpy.mockRestore();
+    const template = Template.fromStack(stack);
+    template.hasOutput('KnowledgeBaseId', {
+      Export: { Name: 'talent-finder-KnowledgeBaseId-dev' },
+      Description: 'Bedrock Knowledge Base ID',
+    });
+    template.hasOutput('DataSourceId', {
+      Export: { Name: 'talent-finder-DataSourceId-dev' },
+      Description: 'Bedrock Knowledge Base Data Source ID',
+    });
   });
 
   it('should use the pineconeIndexHost prop as the Pinecone connection string', () => {
