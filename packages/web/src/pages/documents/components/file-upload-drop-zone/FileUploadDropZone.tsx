@@ -158,16 +158,16 @@ export const FileUploadDropZone = ({ testId = 'file-upload-drop-zone' }: FileUpl
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   {item.isCompleted ? (
                     <CheckCircle2
-                      className="size-5 flex-shrink-0 text-green-600"
+                      className="size-5 shrink-0 text-green-600"
                       data-testid={`${testId}-item-${item.id}-completed`}
                     />
                   ) : item.error ? (
                     <AlertCircle
-                      className="size-5 flex-shrink-0 text-red-600"
+                      className="size-5 shrink-0 text-red-600"
                       data-testid={`${testId}-item-${item.id}-error`}
                     />
                   ) : (
-                    <Cloud className="text-muted-foreground size-5 flex-shrink-0" />
+                    <Cloud className="text-muted-foreground size-5 shrink-0" />
                   )}
                   <div className="min-w-0">
                     <p className="truncate font-medium">{item.file.name}</p>
@@ -175,7 +175,7 @@ export const FileUploadDropZone = ({ testId = 'file-upload-drop-zone' }: FileUpl
                   </div>
                 </div>
 
-                <div className="flex flex-shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   {!item.isCompleted && !item.error && (
                     <span className="text-muted-foreground text-xs">{item.progress}%</span>
                   )}
