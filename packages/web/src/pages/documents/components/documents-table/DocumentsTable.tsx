@@ -7,6 +7,7 @@ import { Empty, EmptyHeader, EmptyMedia } from '@/common/components/shadcn/empty
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { Button } from '@/common/components/shadcn/button';
 import { SyncStatusBadge } from '../sync-status/SyncStatusBadge';
+import { SyncButton } from '../sync-button/SyncButton';
 import { useGetDocuments } from '../../hooks/useGetDocuments';
 import { Document } from '@talent-finder/shared';
 
@@ -149,9 +150,7 @@ export const DocumentsTable = (): JSX.Element => {
               <SyncStatusBadge status={doc.syncStatus} testId={`sync-badge-${doc.documentId}`} />
             </TableCell>
             <TableCell>
-              <Button variant="ghost" size="sm">
-                Menu
-              </Button>
+              <SyncButton documentId={doc.documentId} status={doc.syncStatus} testId={`sync-btn-${doc.documentId}`} />
             </TableCell>
           </TableRow>
         ))}

@@ -9,7 +9,7 @@ interface DocumentsResponse {
   documents: Document[];
 }
 
-const DOCUMENTS_QUERY_KEY = ['documents'];
+export const DOCUMENTS_QUERY_KEY = ['documents'];
 const AUTO_REFETCH_INTERVAL_MS = 10000;
 
 /**
