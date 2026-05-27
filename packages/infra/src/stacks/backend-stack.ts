@@ -4,7 +4,7 @@ import { Stack, StackProps, Duration, RemovalPolicy, SecretValue, CfnOutput } fr
 import { Bucket, BucketEncryption, CorsRule, HttpMethods, StorageClass } from 'aws-cdk-lib/aws-s3';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CorsHttpMethod, HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { ApplicationLogLevel, LoggingFormat, Runtime, SystemLogLevel } from 'aws-cdk-lib/aws-lambda';
@@ -106,9 +106,22 @@ export class BackendStack extends Stack {
       secretStringValue: SecretValue.unsafePlainText(JSON.stringify({ apiKey: props.pineconeApiKey })),
     });
 
-    // HTTP API Gateway
+    // HTTP API Gateway with CORS configuration for browser requests
     const httpApi = new HttpApi(this, 'HttpApi', {
       description: `Talent Finder API for ${props.envName} environment`,
+      disableExecuteApiEndpoint: false,
+      corsPreflight: {
+        allowOrigins: ['*'],
+        allowMethods: [
+          CorsHttpMethod.GET,
+          CorsHttpMethod.POST,
+          CorsHttpMethod.PUT,
+          CorsHttpMethod.DELETE,
+          CorsHttpMethod.PATCH,
+        ],
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key'],
+        maxAge: Duration.hours(1),
+      },
     });
 
     // IAM execution role assumed by the Bedrock service to read documents and access the vector store
