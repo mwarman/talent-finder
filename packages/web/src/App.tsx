@@ -14,12 +14,12 @@ import { Router } from './common/components/router/Router';
 export const App = (): JSX.Element => {
   return (
     <div data-testid="talent-finder-app">
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
           <Router />
           <ReactQueryDevtools initialIsOpen={false} />
-        </ThemeProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </div>
   );
 };
