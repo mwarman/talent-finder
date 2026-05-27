@@ -112,13 +112,7 @@ export class BackendStack extends Stack {
       disableExecuteApiEndpoint: false,
       corsPreflight: {
         allowOrigins: ['*'],
-        allowMethods: [
-          CorsHttpMethod.GET,
-          CorsHttpMethod.POST,
-          CorsHttpMethod.PUT,
-          CorsHttpMethod.DELETE,
-          CorsHttpMethod.PATCH,
-        ],
+        allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.POST, CorsHttpMethod.PUT, CorsHttpMethod.DELETE],
         allowHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key'],
         maxAge: Duration.hours(1),
       },
