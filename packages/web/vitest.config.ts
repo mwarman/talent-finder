@@ -20,6 +20,7 @@ export default mergeConfig(
     test: {
       environment: 'jsdom',
       setupFiles: './vitest.setup.ts',
+      include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
       coverage: {
         include: ['src/**/*.ts', 'src/**/*.tsx'],
         exclude: [
