@@ -1,5 +1,6 @@
 import { JSX } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 import { queryClient } from '@/common/utils/query-client';
 import { ThemeProvider } from './common/providers/ThemeProvider';
@@ -16,6 +17,7 @@ export const App = (): JSX.Element => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <Router />
+          <ReactQueryDevtools initialIsOpen={false} />
         </ThemeProvider>
       </QueryClientProvider>
     </div>
