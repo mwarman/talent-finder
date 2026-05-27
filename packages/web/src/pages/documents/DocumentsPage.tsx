@@ -1,14 +1,20 @@
 import { JSX } from 'react';
 
+import { DocumentsTable } from './components/documents-table/DocumentsTable';
+
 /**
- * DocumentsPage component
+ * DocumentsPage component displays a list of documents with their sync status.
+ * Handles loading, error, and empty states.
  * @returns JSX.Element
  */
 export const DocumentsPage = (): JSX.Element => {
   return (
-    <div data-testid="documents-page" className="p-8">
-      <h1 className="text-3xl font-bold">Documents</h1>
-      <p className="text-muted-foreground mt-4">Document management page coming soon...</p>
+    <div data-testid="documents-page" className="space-y-6 p-8">
+      <div>
+        <h1 className="text-3xl font-bold">Documents</h1>
+        <p className="text-muted-foreground mt-2">Manage and sync your documents</p>
+      </div>
+      <DocumentsTable />
     </div>
   );
 };
