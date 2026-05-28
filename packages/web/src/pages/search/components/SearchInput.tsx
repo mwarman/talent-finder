@@ -4,8 +4,12 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/common/components/shadcn/button';
 import { Textarea } from '@/common/components/shadcn/textarea';
 
+// Define a constant for the maximum character limit
 const MAX_CHARACTERS = 1000;
 
+/**
+ * Props for the SearchInput component.
+ */
 interface SearchInputProps {
   onSubmit: (query: string) => void;
   isLoading?: boolean;
@@ -18,9 +22,10 @@ interface SearchInputProps {
  * Enforces the 1000-character limit with a visible counter.
  * Validates against whitespace-only input.
  *
- * @param onSubmit - Callback function invoked when query is submitted
- * @param isLoading - Whether a request is in progress
- * @param testId - Optional test ID
+ * @param props - Component props
+ * @param props.onSubmit - Callback function invoked when query is submitted
+ * @param props.isLoading - Whether a request is in progress
+ * @param props.testId - Optional test ID
  * @returns JSX.Element
  */
 export const SearchInput = forwardRef<HTMLTextAreaElement, SearchInputProps>(
