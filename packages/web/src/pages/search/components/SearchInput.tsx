@@ -105,6 +105,7 @@ export const SearchInput = ({ onSubmit, isLoading = false, testId }: SearchInput
         <Button
           variant="default"
           size="sm"
+          className="w-48"
           onClick={handleSubmit}
           disabled={!canSubmit}
           data-testid="search-submit-button"
