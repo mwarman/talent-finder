@@ -41,6 +41,9 @@ jobs:
           echo "CDK_LOG_LEVEL=${{ vars.CDK_LOG_LEVEL }}" >> .env
           echo "CDK_LOG_FORMAT=${{ vars.CDK_LOG_FORMAT }}" >> .env
           echo "CDK_LOG_ENABLED=${{ vars.CDK_LOG_ENABLED }}" >> .env
+          echo "CDK_BEDROCK_MODEL_ID=${{ vars.CDK_BEDROCK_MODEL_ID }}" >> .env
+          echo "CDK_BEDROCK_MAX_TOKENS=${{ vars.CDK_BEDROCK_MAX_TOKENS }}" >> .env
+          echo "CDK_BEDROCK_RETRIEVE_TOP_K=${{ vars.CDK_BEDROCK_RETRIEVE_TOP_K }}" >> .env
           echo "CDK_PINECONE_INDEX_HOST=${{ vars.CDK_PINECONE_INDEX_HOST }}" >> .env
           echo "CDK_PINECONE_API_KEY=${{ secrets.CDK_PINECONE_API_KEY }}" >> .env
 
