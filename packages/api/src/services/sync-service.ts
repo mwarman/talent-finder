@@ -5,6 +5,7 @@ import { bedrockClient } from '../utils/bedrock-client';
 import { logger } from '../utils/logger';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncStatus } from '@talent-finder/shared';
+import { NoPendingDocumentsError } from '../utils/errors/no-pending-documents-error';
 
 /**
  * Bedrock ingestion job status values returned from GetIngestionJob API
@@ -16,6 +17,7 @@ type BedrockIngestionJobStatus = 'STARTING' | 'IN_PROGRESS' | 'COMPLETE' | 'FAIL
  */
 export interface SyncStartResult {
   bedrockSyncJobId: string;
+  documentCount: number;
 }
 
 /**
@@ -58,55 +60,71 @@ const mapBedrockStatus = (bedrockStatus: BedrockIngestionJobStatus | string): Sy
  */
 export const SyncService = {
   /**
-   * Initiates a Bedrock Knowledge Base ingestion job for a document.
-   * Updates the document record with the job ID and IN_PROGRESS status.
-   * @param documentId - The unique document identifier
-   * @returns The Bedrock ingestion job ID
-   * @throws Error if the Bedrock API call fails or DynamoDB update fails
+   * Initiates a Bedrock Knowledge Base ingestion job for all PENDING documents.
+   * Finds all documents in PENDING status, starts a single KB ingestion job, then
+   * marks all PENDING documents as IN_PROGRESS with the returned job ID.
+   * @returns The Bedrock ingestion job ID and the count of documents queued
+   * @throws NoPendingDocumentsError if no documents are in PENDING status
+   * @throws Error if the Bedrock API call fails or DynamoDB updates fail
    */
-  startSync: async (documentId: string): Promise<SyncStartResult> => {
-    logger.info({ documentId }, '[SyncService] > startSync');
+  startSync: async (): Promise<SyncStartResult> => {
+    logger.info('[SyncService] > startSync');
 
     try {
+      const pendingDocuments = await DocumentRepository.listByStatus(SyncStatus.PENDING);
+
+      if (pendingDocuments.length === 0) {
+        throw new NoPendingDocumentsError();
+      }
+
+      logger.debug({ documentCount: pendingDocuments.length }, '[SyncService] - startSync - found PENDING documents');
+
       const command = new StartIngestionJobCommand({
         knowledgeBaseId: config.BEDROCK_KB_ID,
         dataSourceId: config.BEDROCK_KB_DATA_SOURCE_ID,
       });
 
-      const response = await bedrockClient.send(command);
-      const bedrockSyncJobId = response.ingestionJob?.ingestionJobId;
+      const bedrockResponse = await bedrockClient.send(command);
+      const bedrockSyncJobId = bedrockResponse.ingestionJob?.ingestionJobId;
 
       if (!bedrockSyncJobId) {
         throw new Error('Bedrock API did not return an ingestionJobId');
       }
 
-      logger.debug({ documentId, bedrockSyncJobId }, '[SyncService] - startSync - received jobId from Bedrock');
+      logger.debug(
+        { bedrockSyncJobId, documentCount: pendingDocuments.length },
+        '[SyncService] - startSync - received jobId from Bedrock',
+      );
 
-      // Update document record with job ID and IN_PROGRESS status
-      await DocumentRepository.updateSyncStatus(documentId, SyncStatus.IN_PROGRESS, {
-        bedrockSyncJobId,
-      });
+      // Update all PENDING documents with the job ID and IN_PROGRESS status
+      await Promise.all(
+        pendingDocuments.map((doc) =>
+          DocumentRepository.updateSyncStatus(doc.documentId, SyncStatus.IN_PROGRESS, { bedrockSyncJobId }),
+        ),
+      );
 
-      logger.info({ documentId, bedrockSyncJobId }, '[SyncService] < startSync - sync job started');
+      logger.info(
+        { bedrockSyncJobId, documentCount: pendingDocuments.length },
+        '[SyncService] < startSync - sync job started',
+      );
 
-      return { bedrockSyncJobId };
+      return { bedrockSyncJobId, documentCount: pendingDocuments.length };
     } catch (error) {
-      logger.error({ error, documentId }, '[SyncService] < startSync - failed to start sync');
+      logger.error({ error }, '[SyncService] < startSync - failed to start sync');
       throw error;
     }
   },
 
   /**
    * Polls the status of a Bedrock Knowledge Base ingestion job.
-   * Updates the document record with the current status and any error messages.
+   * Finds all documents associated with the job and updates their status in DynamoDB.
    * Maps Bedrock status values to the app's SyncStatus enum.
-   * @param documentId - The unique document identifier
    * @param bedrockSyncJobId - The Bedrock ingestion job ID
    * @returns The current sync status and updatedAt timestamp
-   * @throws Error if the Bedrock API call fails or DynamoDB update fails
+   * @throws Error if the Bedrock API call fails or DynamoDB updates fail
    */
-  pollStatus: async (documentId: string, bedrockSyncJobId: string): Promise<SyncStatusResult> => {
-    logger.info({ documentId, bedrockSyncJobId }, '[SyncService] > pollStatus');
+  pollStatus: async (bedrockSyncJobId: string): Promise<SyncStatusResult> => {
+    logger.info({ bedrockSyncJobId }, '[SyncService] > pollStatus');
 
     try {
       const command = new GetIngestionJobCommand({
@@ -115,29 +133,36 @@ export const SyncService = {
         ingestionJobId: bedrockSyncJobId,
       });
 
-      const response = await bedrockClient.send(command);
-      const bedrockStatus = response.ingestionJob?.status;
+      const bedrockResponse = await bedrockClient.send(command);
+      const bedrockStatus = bedrockResponse.ingestionJob?.status;
 
       if (!bedrockStatus) {
         throw new Error('Bedrock API did not return a status');
       }
 
-      logger.debug({ documentId, bedrockStatus }, '[SyncService] - pollStatus - received status from Bedrock');
+      logger.debug({ bedrockStatus }, '[SyncService] - pollStatus - received status from Bedrock');
 
       const mappedStatus = mapBedrockStatus(bedrockStatus);
-      const failureReason = response.ingestionJob?.failureReasons?.[0];
+      const failureReason = bedrockResponse.ingestionJob?.failureReasons?.[0];
 
-      // Update document record with new status
       const updateOptions: { syncError?: string } = {};
       if (mappedStatus === SyncStatus.FAILED && failureReason) {
         updateOptions.syncError = failureReason;
       }
 
-      await DocumentRepository.updateSyncStatus(documentId, mappedStatus, updateOptions);
+      // Update all documents associated with this job
+      const jobDocuments = await DocumentRepository.listByJobId(bedrockSyncJobId);
+
+      await Promise.all(
+        jobDocuments.map((doc) => DocumentRepository.updateSyncStatus(doc.documentId, mappedStatus, updateOptions)),
+      );
 
       const now = new Date().toISOString();
 
-      logger.info({ documentId, mappedStatus }, '[SyncService] < pollStatus - status polled and updated');
+      logger.info(
+        { bedrockSyncJobId, mappedStatus, documentCount: jobDocuments.length },
+        '[SyncService] < pollStatus - status polled and updated',
+      );
 
       return {
         syncStatus: mappedStatus,
@@ -145,7 +170,7 @@ export const SyncService = {
         syncError: updateOptions.syncError,
       };
     } catch (error) {
-      logger.error({ error, documentId }, '[SyncService] < pollStatus - failed to poll status');
+      logger.error({ error, bedrockSyncJobId }, '[SyncService] < pollStatus - failed to poll status');
       throw error;
     }
   },

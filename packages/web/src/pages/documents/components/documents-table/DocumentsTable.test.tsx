@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/test-utils';
+import { screen } from '@/test/test-utils';
+import { renderWithRouter } from '@/test/test-utils';
 import { SyncStatus, Document } from '@talent-finder/shared';
 
 import { DocumentsTable } from './DocumentsTable';
@@ -21,7 +22,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert - should show skeleton, not document rows
     const table = screen.queryByTestId('documents-table');
@@ -41,7 +42,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     expect(screen.getByTestId('error-state')).toBeInTheDocument();
@@ -64,7 +65,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
     const retryButton = screen.getByRole('button', { name: /retry/i });
     retryButton.click();
 
@@ -82,7 +83,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     expect(screen.getByTestId('empty-documents-state')).toBeInTheDocument();
@@ -119,7 +120,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     expect(screen.getByTestId('documents-table')).toBeInTheDocument();
@@ -148,7 +149,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     expect(screen.getByText('application/pdf')).toBeInTheDocument();
@@ -175,7 +176,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     expect(screen.getByText('1 MB')).toBeInTheDocument();
@@ -202,7 +203,7 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     const dateElement = screen.getByText(/May 27, 2026/);
@@ -238,14 +239,14 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
     expect(screen.getByTestId('sync-badge-1')).toBeInTheDocument();
     expect(screen.getByTestId('sync-badge-2')).toBeInTheDocument();
   });
 
-  it('should render action buttons for each document', () => {
+  it('should render sync buttons for each document', () => {
     // Arrange
     const mockDocuments: Document[] = [
       {
@@ -266,9 +267,9 @@ describe('DocumentsTable', () => {
     });
 
     // Act
-    render(<DocumentsTable />);
+    renderWithRouter(<DocumentsTable />);
 
     // Assert
-    expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument();
+    expect(screen.getByTestId('sync-btn-1')).toBeInTheDocument();
   });
 });

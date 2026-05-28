@@ -259,6 +259,120 @@ describe('document-repository', () => {
     });
   });
 
+  describe('listByStatus', () => {
+    it('should return documents matching the given sync status', async () => {
+      // Arrange
+      const status = SyncStatus.PENDING;
+      const matchingDocs = [
+        {
+          documentId: 'doc-1',
+          filename: 'resume.pdf',
+          uploadedAt: '2026-05-23T10:00:00Z',
+          contentType: 'application/pdf',
+          sizeBytes: 102400,
+          syncStatus: SyncStatus.PENDING,
+        },
+        {
+          documentId: 'doc-2',
+          filename: 'cover-letter.txt',
+          uploadedAt: '2026-05-23T09:00:00Z',
+          contentType: 'text/plain',
+          sizeBytes: 5000,
+          syncStatus: SyncStatus.PENDING,
+        },
+      ];
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: matchingDocs });
+
+      // Act
+      const result = await DocumentRepository.listByStatus(status);
+
+      // Assert
+      expect(ScanCommand).toHaveBeenCalledOnce();
+      const callArgs = vi.mocked(ScanCommand).mock.calls[0][0];
+      expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
+      expect(callArgs.FilterExpression).toBe('syncStatus = :status');
+      expect(callArgs.ExpressionAttributeValues).toEqual({ ':status': status });
+      expect(result).toEqual(matchingDocs);
+    });
+
+    it('should return an empty array when no documents match the status', async () => {
+      // Arrange
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: undefined });
+
+      // Act
+      const result = await DocumentRepository.listByStatus(SyncStatus.IN_PROGRESS);
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+
+    it('should throw an error if DynamoDB scan fails', async () => {
+      // Arrange
+      const error = new Error('DynamoDB error');
+      vi.mocked(dynamoClient.send).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(DocumentRepository.listByStatus(SyncStatus.PENDING)).rejects.toThrow(error);
+    });
+  });
+
+  describe('listByJobId', () => {
+    it('should return all documents associated with the given job ID', async () => {
+      // Arrange
+      const bedrockSyncJobId = 'job-789';
+      const jobDocs = [
+        {
+          documentId: 'doc-1',
+          filename: 'resume.pdf',
+          uploadedAt: '2026-05-23T10:00:00Z',
+          contentType: 'application/pdf',
+          syncStatus: SyncStatus.IN_PROGRESS,
+          bedrockSyncJobId,
+        },
+        {
+          documentId: 'doc-2',
+          filename: 'cover-letter.txt',
+          uploadedAt: '2026-05-23T09:00:00Z',
+          contentType: 'text/plain',
+          syncStatus: SyncStatus.IN_PROGRESS,
+          bedrockSyncJobId,
+        },
+      ];
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: jobDocs });
+
+      // Act
+      const result = await DocumentRepository.listByJobId(bedrockSyncJobId);
+
+      // Assert
+      expect(ScanCommand).toHaveBeenCalledOnce();
+      const callArgs = vi.mocked(ScanCommand).mock.calls[0][0];
+      expect(callArgs.TableName).toBe(config.DOCUMENTS_TABLE_NAME);
+      expect(callArgs.FilterExpression).toBe('bedrockSyncJobId = :jobId');
+      expect(callArgs.ExpressionAttributeValues).toEqual({ ':jobId': bedrockSyncJobId });
+      expect(result).toEqual(jobDocs);
+    });
+
+    it('should return an empty array when no documents match the job ID', async () => {
+      // Arrange
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: undefined });
+
+      // Act
+      const result = await DocumentRepository.listByJobId('job-unknown');
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+
+    it('should throw an error if DynamoDB scan fails', async () => {
+      // Arrange
+      const error = new Error('DynamoDB error');
+      vi.mocked(dynamoClient.send).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(DocumentRepository.listByJobId('job-789')).rejects.toThrow(error);
+    });
+  });
+
   describe('deleteById', () => {
     it('should delete a document from DynamoDB', async () => {
       // Arrange

@@ -4,47 +4,34 @@ import { logger, withRequestTracking } from '../utils/logger';
 import { response } from '../utils/response';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncService } from '../services/sync-service';
+import { SyncStatus } from '@talent-finder/shared';
 
 /**
- * Handler for retrieving the synchronization status of a document.
- * Validates the documentId from the path parameters, checks if the document exists,
- * and polls the sync status from the SyncService if a sync job is active.
- * Returns the sync status and last updated time.
+ * Handler for retrieving the current synchronization status of the active KB ingestion job.
+ * Finds any document in IN_PROGRESS status to locate the active Bedrock job ID, polls
+ * Bedrock for the latest status, and updates all documents associated with that job.
+ * Returns the current sync status, or syncStatus: null when no active job is found.
  */
 export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
   withRequestTracking(event, context);
   logger.info('[SyncStatusHandler] > handle');
 
   try {
-    const documentId = event.pathParameters?.id;
+    // Find documents with an active sync job
+    const activeDocuments = await DocumentRepository.listByStatus(SyncStatus.IN_PROGRESS);
+    const activeDocument = activeDocuments.find((doc) => doc.bedrockSyncJobId);
 
-    if (!documentId) {
-      logger.warn('[SyncStatusHandler] < handle - missing documentId in path');
-      return response.badRequest('Bad Request', 'documentId is required');
+    if (!activeDocument?.bedrockSyncJobId) {
+      logger.info('[SyncStatusHandler] < handle - no active sync job found');
+      return response.ok({ syncStatus: null });
     }
 
-    // Get the document
-    const document = await DocumentRepository.getById(documentId);
-    if (!document) {
-      logger.warn({ documentId }, '[SyncStatusHandler] < handle - document not found');
-      return response.notFound('Not Found', `Document with id ${documentId} not found`);
-    }
+    const { bedrockSyncJobId } = activeDocument;
 
-    // TODO: If syncStatus is COMPLETED or FAILED, we could return the status immediately without polling Bedrock again until a new sync is initiated. This would reduce unnecessary API calls to Bedrock for completed/failed jobs.
+    // Poll status from Bedrock and fan out updates to all documents in the job
+    const { syncStatus, updatedAt, syncError } = await SyncService.pollStatus(bedrockSyncJobId);
 
-    // If no job ID, return current status without polling
-    if (!document.bedrockSyncJobId) {
-      logger.info({ documentId }, '[SyncStatusHandler] < handle - no active sync job');
-      return response.ok({
-        syncStatus: document.syncStatus,
-        updatedAt: document.updatedAt || document.uploadedAt,
-      });
-    }
-
-    // Poll status from Bedrock
-    const { syncStatus, updatedAt, syncError } = await SyncService.pollStatus(documentId, document.bedrockSyncJobId);
-
-    logger.info({ documentId, syncStatus }, '[SyncStatusHandler] < handle - status retrieved');
+    logger.info({ bedrockSyncJobId, syncStatus }, '[SyncStatusHandler] < handle - status retrieved');
 
     const responseBody: Record<string, unknown> = {
       syncStatus,

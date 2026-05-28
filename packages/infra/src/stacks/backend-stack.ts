@@ -421,10 +421,10 @@ export class BackendStack extends Stack {
       }),
     );
 
-    // Wire sync start Lambda to POST /documents/{id}/sync route
+    // Wire sync start Lambda to POST /sync route
     const syncStartIntegration = new HttpLambdaIntegration('SyncStartIntegration', syncStartLambda);
     httpApi.addRoutes({
-      path: '/documents/{id}/sync',
+      path: '/sync',
       methods: [HttpMethod.POST],
       integration: syncStartIntegration,
     });
@@ -465,10 +465,10 @@ export class BackendStack extends Stack {
       }),
     );
 
-    // Wire sync status Lambda to GET /documents/{id}/sync-status route
+    // Wire sync status Lambda to GET /sync-status route
     const syncStatusIntegration = new HttpLambdaIntegration('SyncStatusIntegration', syncStatusLambda);
     httpApi.addRoutes({
-      path: '/documents/{id}/sync-status',
+      path: '/sync-status',
       methods: [HttpMethod.GET],
       integration: syncStatusIntegration,
     });

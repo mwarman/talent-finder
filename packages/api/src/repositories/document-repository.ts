@@ -87,6 +87,60 @@ export const DocumentRepository = {
   },
 
   /**
+   * Retrieves all documents with a specific sync status.
+   * @param status - The sync status to filter by
+   * @returns An array of documents matching the given sync status
+   * @throws Error if the DynamoDB scan operation fails
+   */
+  listByStatus: async (status: SyncStatus): Promise<Document[]> => {
+    logger.debug({ status }, '[DocumentRepository] > listByStatus');
+    try {
+      const command = new ScanCommand({
+        TableName: config.DOCUMENTS_TABLE_NAME,
+        FilterExpression: 'syncStatus = :status',
+        ExpressionAttributeValues: { ':status': status },
+      });
+      const response = await dynamoClient.send(command);
+      const documents = (response.Items || []) as Document[];
+      logger.debug({ status, count: documents.length }, '[DocumentRepository] < listByStatus - documents retrieved');
+      return documents;
+    } catch (error) {
+      logger.error({ error, status }, '[DocumentRepository] < listByStatus - failed to list documents by status');
+      throw error;
+    }
+  },
+
+  /**
+   * Retrieves all documents associated with a specific Bedrock sync job ID.
+   * @param bedrockSyncJobId - The Bedrock ingestion job ID to filter by
+   * @returns An array of documents matching the given job ID
+   * @throws Error if the DynamoDB scan operation fails
+   */
+  listByJobId: async (bedrockSyncJobId: string): Promise<Document[]> => {
+    logger.debug({ bedrockSyncJobId }, '[DocumentRepository] > listByJobId');
+    try {
+      const command = new ScanCommand({
+        TableName: config.DOCUMENTS_TABLE_NAME,
+        FilterExpression: 'bedrockSyncJobId = :jobId',
+        ExpressionAttributeValues: { ':jobId': bedrockSyncJobId },
+      });
+      const response = await dynamoClient.send(command);
+      const documents = (response.Items || []) as Document[];
+      logger.debug(
+        { bedrockSyncJobId, count: documents.length },
+        '[DocumentRepository] < listByJobId - documents retrieved',
+      );
+      return documents;
+    } catch (error) {
+      logger.error(
+        { error, bedrockSyncJobId },
+        '[DocumentRepository] < listByJobId - failed to list documents by job ID',
+      );
+      throw error;
+    }
+  },
+
+  /**
    * Updates the sync status and optional metadata of a document record.
    * Automatically sets updatedAt to the current timestamp.
    * @param documentId - The unique document identifier

@@ -5,11 +5,13 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from '@/common/utils/query-client';
 import { ThemeProvider } from './common/providers/ThemeProvider';
 import { Router } from './common/components/router/Router';
+import { Toaster } from './common/components/shadcn/sonner';
 
 /**
  * The main App component that sets up the application with necessary providers and routing.
  * It includes the QueryClientProvider for managing server state with React Query and the ThemeProvider for theme management.
  * The Router component is responsible for rendering the appropriate pages based on the current route.
+ * The Toaster component provides notification/toast functionality.
  */
 export const App = (): JSX.Element => {
   return (
@@ -17,6 +19,7 @@ export const App = (): JSX.Element => {
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <Router />
+          <Toaster />
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
       </ThemeProvider>

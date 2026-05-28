@@ -386,7 +386,7 @@ describe('BackendStack', () => {
     expect(talentFinderStack).toBeDefined();
   });
 
-  it('should create sync start Lambda wired to POST /documents/:id/sync', () => {
+  it('should create sync start Lambda wired to POST /sync', () => {
     // Arrange
     const tags = {
       App: 'talent-finder',
@@ -411,11 +411,11 @@ describe('BackendStack', () => {
       bedrockMaxTokens: 1500,
     });
 
-    // Assert — stack must be defined and the API endpoint must exist (POST /documents/:id/sync route is wired)
+    // Assert — stack must be defined and the API endpoint must exist (POST /sync route is wired)
     expect(talentFinderStack).toBeDefined();
   });
 
-  it('should create sync status Lambda wired to GET /documents/:id/sync-status', () => {
+  it('should create sync status Lambda wired to GET /sync-status', () => {
     // Arrange
     const tags = {
       App: 'talent-finder',
@@ -440,7 +440,7 @@ describe('BackendStack', () => {
       bedrockMaxTokens: 1500,
     });
 
-    // Assert — stack must be defined and the API endpoint must exist (GET /documents/:id/sync-status route is wired)
+    // Assert — stack must be defined and the API endpoint must exist (GET /sync-status route is wired)
     expect(talentFinderStack).toBeDefined();
   });
 });
