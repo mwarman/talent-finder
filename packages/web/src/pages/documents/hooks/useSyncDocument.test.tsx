@@ -24,11 +24,12 @@ describe('useSyncDocument', () => {
     vi.clearAllMocks();
   });
 
-  it('should call POST /documents/:id/sync with the correct document ID', async () => {
+  it('should call POST /sync with no arguments', async () => {
     const mockResponse = {
       data: {
         syncStatus: 'IN_PROGRESS',
-        bedrockSyncJobId: 'job-123',
+        jobId: 'job-123',
+        documentCount: 2,
       },
     };
 
@@ -37,17 +38,18 @@ describe('useSyncDocument', () => {
     const { result } = renderHook(() => useSyncDocument(), { wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync('doc-123');
+      await result.current.mutateAsync();
     });
 
-    expect(apiClient.post).toHaveBeenCalledWith('/documents/doc-123/sync');
+    expect(apiClient.post).toHaveBeenCalledWith('/sync');
   });
 
   it('should return sync response data on success', async () => {
     const mockResponse = {
       data: {
         syncStatus: 'IN_PROGRESS',
-        bedrockSyncJobId: 'job-123',
+        jobId: 'job-123',
+        documentCount: 2,
       },
     };
 
@@ -57,7 +59,7 @@ describe('useSyncDocument', () => {
 
     let syncData;
     await act(async () => {
-      syncData = await result.current.mutateAsync('doc-123');
+      syncData = await result.current.mutateAsync();
     });
 
     expect(syncData).toEqual(mockResponse.data);
@@ -69,7 +71,8 @@ describe('useSyncDocument', () => {
     const mockResponse = {
       data: {
         syncStatus: 'IN_PROGRESS',
-        bedrockSyncJobId: 'job-123',
+        jobId: 'job-123',
+        documentCount: 2,
       },
     };
 
@@ -78,7 +81,7 @@ describe('useSyncDocument', () => {
     const { result } = renderHook(() => useSyncDocument(), { wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync('doc-123');
+      await result.current.mutateAsync();
     });
 
     expect(invalidateQuerySpy).toHaveBeenCalledWith({
@@ -95,7 +98,7 @@ describe('useSyncDocument', () => {
 
     await act(async () => {
       try {
-        await result.current.mutateAsync('doc-123');
+        await result.current.mutateAsync();
       } catch {
         // Error is expected
       }
@@ -108,7 +111,8 @@ describe('useSyncDocument', () => {
     const mockResponse = {
       data: {
         syncStatus: 'IN_PROGRESS',
-        bedrockSyncJobId: 'job-123',
+        jobId: 'job-123',
+        documentCount: 2,
       },
     };
 
@@ -120,7 +124,7 @@ describe('useSyncDocument', () => {
 
     let syncData;
     await act(async () => {
-      syncData = await result.current.mutateAsync('doc-123');
+      syncData = await result.current.mutateAsync();
     });
 
     // Verify the mutation completed successfully

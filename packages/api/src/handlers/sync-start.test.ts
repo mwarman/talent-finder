@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
-vi.mock('../repositories/document-repository', () => ({
-  DocumentRepository: {
-    getById: vi.fn(),
-  },
-}));
-
 vi.mock('../services/sync-service', () => ({
   SyncService: {
     startSync: vi.fn(),
   },
 }));
+
+vi.mock('../utils/errors/no-pending-documents-error', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/errors/no-pending-documents-error')>();
+  return actual;
+});
 
 vi.mock('../utils/logger', () => ({
   logger: {
@@ -23,31 +22,29 @@ vi.mock('../utils/logger', () => ({
   withRequestTracking: vi.fn(),
 }));
 
-import { DocumentRepository } from '../repositories/document-repository';
 import { SyncService } from '../services/sync-service';
 import { handle } from './sync-start';
-import { SyncStatus } from '@talent-finder/shared';
+import { NoPendingDocumentsError } from '../utils/errors/no-pending-documents-error';
 
-const makeEvent = (documentId: string): APIGatewayProxyEventV2 =>
+const makeEvent = (): APIGatewayProxyEventV2 =>
   ({
-    pathParameters: { id: documentId },
     requestContext: {
       http: {
         method: 'POST',
-        path: `/documents/${documentId}/sync`,
+        path: '/sync',
         protocol: 'HTTP/1.1',
         sourceIp: '127.0.0.1',
         userAgent: 'test',
       },
-      routeKey: `POST /documents/{id}/sync`,
+      routeKey: 'POST /sync',
       domainName: 'example.com',
       timeEpoch: Date.now(),
     },
-    rawPath: `/documents/${documentId}/sync`,
+    rawPath: '/sync',
     rawQueryString: '',
     headers: {},
     requestId: 'req-sync-start-123',
-    routeKey: `POST /documents/{id}/sync`,
+    routeKey: 'POST /sync',
   }) as unknown as APIGatewayProxyEventV2;
 
 const makeContext = (): Context =>
@@ -68,24 +65,15 @@ describe('sync-start handler', () => {
     vi.clearAllMocks();
   });
 
-  it('should return 202 with documentId, syncStatus IN_PROGRESS, and jobId on successful sync start', async () => {
+  it('should return 202 with syncStatus IN_PROGRESS, jobId, and documentCount on success', async () => {
     // Arrange
-    const documentId = 'doc-123';
     const jobId = 'job-456';
-    const event = makeEvent(documentId);
+    const event = makeEvent();
     const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt: new Date().toISOString(),
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.PENDING,
-    });
 
     vi.mocked(SyncService.startSync).mockResolvedValueOnce({
       bedrockSyncJobId: jobId,
+      documentCount: 3,
     });
 
     // Act
@@ -96,82 +84,51 @@ describe('sync-start handler', () => {
     expect(result.headers?.['Content-Type']).toBe('application/json');
 
     const body = JSON.parse(result.body || '{}');
-    expect(body.documentId).toBe(documentId);
     expect(body.syncStatus).toBe('IN_PROGRESS');
     expect(body.jobId).toBe(jobId);
+    expect(body.documentCount).toBe(3);
   });
 
-  it('should return 400 if documentId is missing in path parameters', async () => {
+  it('should call SyncService.startSync with no arguments', async () => {
     // Arrange
-    const event = {
-      ...makeEvent('doc-123'),
-      pathParameters: undefined,
-    } as unknown as APIGatewayProxyEventV2;
+    const event = makeEvent();
     const context = makeContext();
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    expect(result.statusCode).toBe(400);
-    const body = JSON.parse(result.body || '{}');
-    expect(body.error).toBe('Bad Request');
-    expect(body.message).toContain('documentId is required');
-  });
-
-  it('should return 404 if document does not exist', async () => {
-    // Arrange
-    const documentId = 'nonexistent-doc';
-    const event = makeEvent(documentId);
-    const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce(undefined);
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    expect(result.statusCode).toBe(404);
-    const body = JSON.parse(result.body || '{}');
-    expect(body.error).toBe('Not Found');
-    expect(body.message).toContain(documentId);
-  });
-
-  it('should call SyncService.startSync with documentId', async () => {
-    // Arrange
-    const documentId = 'doc-123';
-    const jobId = 'job-456';
-    const event = makeEvent(documentId);
-    const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt: new Date().toISOString(),
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.PENDING,
-    });
 
     vi.mocked(SyncService.startSync).mockResolvedValueOnce({
-      bedrockSyncJobId: jobId,
+      bedrockSyncJobId: 'job-456',
+      documentCount: 1,
     });
 
     // Act
     await handle(event, context);
 
     // Assert
-    expect(SyncService.startSync).toHaveBeenCalledWith(documentId);
+    expect(SyncService.startSync).toHaveBeenCalledWith();
+  });
+
+  it('should return 409 when no PENDING documents exist', async () => {
+    // Arrange
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(SyncService.startSync).mockRejectedValueOnce(new NoPendingDocumentsError());
+
+    // Act
+    const result = await handle(event, context);
+
+    // Assert
+    expect(result.statusCode).toBe(409);
+    const body = JSON.parse(result.body || '{}');
+    expect(body.error).toBe('Conflict');
+    expect(body.message).toContain('PENDING');
   });
 
   it('should return 500 on unexpected error', async () => {
     // Arrange
-    const documentId = 'doc-123';
-    const event = makeEvent(documentId);
+    const event = makeEvent();
     const context = makeContext();
-    const testError = new Error('Unexpected error');
 
-    vi.mocked(DocumentRepository.getById).mockRejectedValueOnce(testError);
+    vi.mocked(SyncService.startSync).mockRejectedValueOnce(new Error('Unexpected error'));
 
     // Act
     const result = await handle(event, context);

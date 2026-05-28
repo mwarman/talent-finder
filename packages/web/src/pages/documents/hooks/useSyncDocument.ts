@@ -8,12 +8,13 @@ import { DOCUMENTS_QUERY_KEY } from './useGetDocuments';
 
 interface SyncResponse {
   syncStatus: SyncStatus;
-  bedrockSyncJobId: string;
+  jobId: string;
+  documentCount: number;
 }
 
 /**
- * Hook to trigger a sync for a specific document.
- * Calls POST /documents/:id/sync and invalidates the documents query on success.
+ * Hook to trigger a batch synchronization of all PENDING documents.
+ * Calls POST /sync and invalidates the documents query on success.
  * Shows error toast if the mutation fails.
  *
  * @returns Mutation object with mutate function and state flags
@@ -21,9 +22,9 @@ interface SyncResponse {
 export const useSyncDocument = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<SyncResponse, ApiError, string>({
-    mutationFn: async (documentId: string) => {
-      const response = await apiClient.post<SyncResponse>(`/documents/${documentId}/sync`);
+  return useMutation<SyncResponse, ApiError, void>({
+    mutationFn: async () => {
+      const response = await apiClient.post<SyncResponse>('/sync');
       return response.data;
     },
     onSuccess: () => {

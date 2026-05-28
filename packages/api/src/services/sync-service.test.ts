@@ -17,6 +17,8 @@ vi.mock('../utils/logger', () => ({
 
 vi.mock('../repositories/document-repository', () => ({
   DocumentRepository: {
+    listByStatus: vi.fn(),
+    listByJobId: vi.fn(),
     updateSyncStatus: vi.fn(),
   },
 }));
@@ -32,6 +34,7 @@ import { SyncService } from './sync-service';
 import { bedrockClient } from '../utils/bedrock-client';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncStatus } from '@talent-finder/shared';
+import { NoPendingDocumentsError } from '../utils/errors/no-pending-documents-error';
 
 describe('SyncService', () => {
   beforeEach(() => {
@@ -39,204 +42,232 @@ describe('SyncService', () => {
   });
 
   describe('startSync', () => {
-    it('should call StartIngestionJob and update document with job ID and IN_PROGRESS status', async () => {
+    it('should update all PENDING documents to IN_PROGRESS with the job ID', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
+      const pendingDocs = [
+        { documentId: 'doc-1', syncStatus: SyncStatus.PENDING },
+        { documentId: 'doc-2', syncStatus: SyncStatus.PENDING },
+      ];
 
+      vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce(pendingDocs as never);
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          ingestionJobId: jobId,
-        },
+        ingestionJob: { ingestionJobId: jobId },
       });
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.startSync(documentId);
+      const result = await SyncService.startSync();
 
       // Assert
+      expect(DocumentRepository.listByStatus).toHaveBeenCalledWith(SyncStatus.PENDING);
       expect(result.bedrockSyncJobId).toBe(jobId);
-      expect(bedrockClient.send).toHaveBeenCalledOnce();
-      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith(documentId, SyncStatus.IN_PROGRESS, {
+      expect(result.documentCount).toBe(2);
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledTimes(2);
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith('doc-1', SyncStatus.IN_PROGRESS, {
+        bedrockSyncJobId: jobId,
+      });
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith('doc-2', SyncStatus.IN_PROGRESS, {
         bedrockSyncJobId: jobId,
       });
     });
 
-    it('should throw error if Bedrock API does not return ingestionJobId', async () => {
+    it('should throw NoPendingDocumentsError when no PENDING documents exist', async () => {
       // Arrange
-      const documentId = 'doc-123';
-      vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {},
-      });
+      vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([]);
 
       // Act & Assert
-      await expect(SyncService.startSync(documentId)).rejects.toThrow('Bedrock API did not return an ingestionJobId');
+      await expect(SyncService.startSync()).rejects.toThrow(NoPendingDocumentsError);
+      expect(bedrockClient.send).not.toHaveBeenCalled();
     });
 
-    it('should propagate DocumentRepository errors', async () => {
+    it('should throw an error if Bedrock API does not return an ingestionJobId', async () => {
       // Arrange
-      const documentId = 'doc-123';
+      vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+        { documentId: 'doc-1', syncStatus: SyncStatus.PENDING },
+      ] as never);
+      vi.mocked(bedrockClient.send).mockResolvedValueOnce({ ingestionJob: {} });
+
+      // Act & Assert
+      await expect(SyncService.startSync()).rejects.toThrow('Bedrock API did not return an ingestionJobId');
+    });
+
+    it('should propagate DocumentRepository.updateSyncStatus errors', async () => {
+      // Arrange
       const jobId = 'job-456';
       const testError = new Error('DynamoDB error');
 
+      vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+        { documentId: 'doc-1', syncStatus: SyncStatus.PENDING },
+      ] as never);
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          ingestionJobId: jobId,
-        },
+        ingestionJob: { ingestionJobId: jobId },
       });
       vi.mocked(DocumentRepository.updateSyncStatus).mockRejectedValueOnce(testError);
 
       // Act & Assert
-      await expect(SyncService.startSync(documentId)).rejects.toThrow('DynamoDB error');
+      await expect(SyncService.startSync()).rejects.toThrow('DynamoDB error');
     });
   });
 
   describe('pollStatus', () => {
-    it('should poll status and map STARTING to STARTING', async () => {
+    it('should update all job documents and map STARTING to STARTING', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
+      const jobDocs = [
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+        { documentId: 'doc-2', bedrockSyncJobId: jobId },
+      ];
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'STARTING',
-        },
+        ingestionJob: { status: 'STARTING' },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce(jobDocs as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.syncStatus).toBe(SyncStatus.STARTING);
-      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith(documentId, SyncStatus.STARTING, {});
+      expect(DocumentRepository.listByJobId).toHaveBeenCalledWith(jobId);
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledTimes(2);
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith('doc-1', SyncStatus.STARTING, {});
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith('doc-2', SyncStatus.STARTING, {});
     });
 
-    it('should poll status and map IN_PROGRESS to IN_PROGRESS', async () => {
+    it('should map IN_PROGRESS to IN_PROGRESS', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'IN_PROGRESS',
-        },
+        ingestionJob: { status: 'IN_PROGRESS' },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce([
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+      ] as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.syncStatus).toBe(SyncStatus.IN_PROGRESS);
     });
 
-    it('should poll status and map COMPLETE to COMPLETED', async () => {
+    it('should map COMPLETE to COMPLETED', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'COMPLETE',
-        },
+        ingestionJob: { status: 'COMPLETE' },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce([
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+      ] as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.syncStatus).toBe(SyncStatus.COMPLETED);
     });
 
-    it('should poll status and map FAILED to FAILED with error message', async () => {
+    it('should map FAILED to FAILED and propagate syncError to all documents', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
       const errorMessage = 'Permission denied';
+      const jobDocs = [
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+        { documentId: 'doc-2', bedrockSyncJobId: jobId },
+      ];
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'FAILED',
-          failureReasons: [errorMessage],
-        },
+        ingestionJob: { status: 'FAILED', failureReasons: [errorMessage] },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce(jobDocs as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.syncStatus).toBe(SyncStatus.FAILED);
       expect(result.syncError).toBe(errorMessage);
-      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith(documentId, SyncStatus.FAILED, {
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith('doc-1', SyncStatus.FAILED, {
+        syncError: errorMessage,
+      });
+      expect(DocumentRepository.updateSyncStatus).toHaveBeenCalledWith('doc-2', SyncStatus.FAILED, {
         syncError: errorMessage,
       });
     });
 
-    it('should poll status and map STOPPING to STOPPING', async () => {
+    it('should map STOPPING to STOPPING', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'STOPPING',
-        },
+        ingestionJob: { status: 'STOPPING' },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce([
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+      ] as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.syncStatus).toBe(SyncStatus.STOPPING);
     });
 
-    it('should poll status and map STOPPED to STOPPED', async () => {
+    it('should map STOPPED to STOPPED', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'STOPPED',
-        },
+        ingestionJob: { status: 'STOPPED' },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce([
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+      ] as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.syncStatus).toBe(SyncStatus.STOPPED);
     });
 
-    it('should throw error if Bedrock API does not return status', async () => {
+    it('should throw an error if Bedrock API does not return a status', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
 
-      vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {},
-      });
+      vi.mocked(bedrockClient.send).mockResolvedValueOnce({ ingestionJob: {} });
 
       // Act & Assert
-      await expect(SyncService.pollStatus(documentId, jobId)).rejects.toThrow('Bedrock API did not return a status');
+      await expect(SyncService.pollStatus(jobId)).rejects.toThrow('Bedrock API did not return a status');
     });
 
-    it('should return updatedAt timestamp in response', async () => {
+    it('should return a valid ISO updatedAt timestamp', async () => {
       // Arrange
-      const documentId = 'doc-123';
       const jobId = 'job-456';
 
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
-        ingestionJob: {
-          status: 'COMPLETE',
-        },
+        ingestionJob: { status: 'COMPLETE' },
       });
+      vi.mocked(DocumentRepository.listByJobId).mockResolvedValueOnce([
+        { documentId: 'doc-1', bedrockSyncJobId: jobId },
+      ] as never);
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
       // Act
-      const result = await SyncService.pollStatus(documentId, jobId);
+      const result = await SyncService.pollStatus(jobId);
 
       // Assert
       expect(result.updatedAt).toBeDefined();
-      expect(typeof result.updatedAt).toBe('string');
-      // Verify it's a valid ISO timestamp
       expect(new Date(result.updatedAt).getTime()).toBeGreaterThan(0);
     });
   });

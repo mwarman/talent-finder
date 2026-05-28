@@ -3,7 +3,7 @@ import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
 vi.mock('../repositories/document-repository', () => ({
   DocumentRepository: {
-    getById: vi.fn(),
+    listByStatus: vi.fn(),
   },
 }));
 
@@ -28,26 +28,25 @@ import { SyncService } from '../services/sync-service';
 import { handle } from './sync-status';
 import { SyncStatus } from '@talent-finder/shared';
 
-const makeEvent = (documentId: string): APIGatewayProxyEventV2 =>
+const makeEvent = (): APIGatewayProxyEventV2 =>
   ({
-    pathParameters: { id: documentId },
     requestContext: {
       http: {
         method: 'GET',
-        path: `/documents/${documentId}/sync-status`,
+        path: '/sync-status',
         protocol: 'HTTP/1.1',
         sourceIp: '127.0.0.1',
         userAgent: 'test',
       },
-      routeKey: `GET /documents/{id}/sync-status`,
+      routeKey: 'GET /sync-status',
       domainName: 'example.com',
       timeEpoch: Date.now(),
     },
-    rawPath: `/documents/${documentId}/sync-status`,
+    rawPath: '/sync-status',
     rawQueryString: '',
     headers: {},
     requestId: 'req-sync-status-123',
-    routeKey: `GET /documents/{id}/sync-status`,
+    routeKey: 'GET /sync-status',
   }) as unknown as APIGatewayProxyEventV2;
 
 const makeContext = (): Context =>
@@ -68,23 +67,23 @@ describe('sync-status handler', () => {
     vi.clearAllMocks();
   });
 
-  it('should return 200 with syncStatus and updatedAt on successful status poll', async () => {
+  it('should return 200 with syncStatus and updatedAt when an active job is found', async () => {
     // Arrange
-    const documentId = 'doc-123';
     const jobId = 'job-456';
     const updatedAt = new Date().toISOString();
-    const event = makeEvent(documentId);
+    const event = makeEvent();
     const context = makeContext();
 
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt: new Date().toISOString(),
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.IN_PROGRESS,
-      bedrockSyncJobId: jobId,
-    });
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        bedrockSyncJobId: jobId,
+      },
+    ] as never);
 
     vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
       syncStatus: SyncStatus.COMPLETED,
@@ -103,24 +102,99 @@ describe('sync-status handler', () => {
     expect(body.updatedAt).toBe(updatedAt);
   });
 
+  it('should call SyncService.pollStatus with the bedrockSyncJobId from the active document', async () => {
+    // Arrange
+    const jobId = 'job-456';
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        bedrockSyncJobId: jobId,
+      },
+    ] as never);
+
+    vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
+      syncStatus: SyncStatus.IN_PROGRESS,
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Act
+    await handle(event, context);
+
+    // Assert
+    expect(DocumentRepository.listByStatus).toHaveBeenCalledWith(SyncStatus.IN_PROGRESS);
+    expect(SyncService.pollStatus).toHaveBeenCalledWith(jobId);
+  });
+
+  it('should return 200 with syncStatus: null when no active job is found', async () => {
+    // Arrange
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([]);
+
+    // Act
+    const result = await handle(event, context);
+
+    // Assert
+    expect(result.statusCode).toBe(200);
+    expect(SyncService.pollStatus).not.toHaveBeenCalled();
+
+    const body = JSON.parse(result.body || '{}');
+    expect(body.syncStatus).toBeNull();
+  });
+
+  it('should return 200 with syncStatus: null when active documents have no bedrockSyncJobId', async () => {
+    // Arrange
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        // No bedrockSyncJobId
+      },
+    ] as never);
+
+    // Act
+    const result = await handle(event, context);
+
+    // Assert
+    expect(result.statusCode).toBe(200);
+    expect(SyncService.pollStatus).not.toHaveBeenCalled();
+
+    const body = JSON.parse(result.body || '{}');
+    expect(body.syncStatus).toBeNull();
+  });
+
   it('should return 200 with syncError when status is FAILED', async () => {
     // Arrange
-    const documentId = 'doc-123';
     const jobId = 'job-456';
     const updatedAt = new Date().toISOString();
     const syncError = 'Permission denied';
-    const event = makeEvent(documentId);
+    const event = makeEvent();
     const context = makeContext();
 
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt: new Date().toISOString(),
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.IN_PROGRESS,
-      bedrockSyncJobId: jobId,
-    });
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        bedrockSyncJobId: jobId,
+      },
+    ] as never);
 
     vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
       syncStatus: SyncStatus.FAILED,
@@ -140,143 +214,12 @@ describe('sync-status handler', () => {
     expect(body.updatedAt).toBe(updatedAt);
   });
 
-  it('should return 200 with current status if no active sync job', async () => {
-    // Arrange
-    const documentId = 'doc-123';
-    const uploadedAt = new Date().toISOString();
-    const event = makeEvent(documentId);
-    const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt,
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.PENDING,
-      // No bedrockSyncJobId
-    });
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    expect(result.statusCode).toBe(200);
-    expect(SyncService.pollStatus).not.toHaveBeenCalled();
-
-    const body = JSON.parse(result.body || '{}');
-    expect(body.syncStatus).toBe(SyncStatus.PENDING);
-    expect(body.updatedAt).toBe(uploadedAt);
-  });
-
-  it('should return 200 with updatedAt field when document has updatedAt', async () => {
-    // Arrange
-    const documentId = 'doc-123';
-    const jobId = 'job-456';
-    const documentUpdatedAt = new Date().toISOString();
-    const pollUpdatedAt = new Date().toISOString();
-    const event = makeEvent(documentId);
-    const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt: new Date().toISOString(),
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.IN_PROGRESS,
-      bedrockSyncJobId: jobId,
-      updatedAt: documentUpdatedAt,
-    });
-
-    vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
-      syncStatus: SyncStatus.IN_PROGRESS,
-      updatedAt: pollUpdatedAt,
-    });
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    const body = JSON.parse(result.body || '{}');
-    // The handler returns the polling result's updatedAt
-    expect(body.updatedAt).toBe(pollUpdatedAt);
-  });
-
-  it('should return 400 if documentId is missing in path parameters', async () => {
-    // Arrange
-    const event = {
-      ...makeEvent('doc-123'),
-      pathParameters: undefined,
-    } as unknown as APIGatewayProxyEventV2;
-    const context = makeContext();
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    expect(result.statusCode).toBe(400);
-    const body = JSON.parse(result.body || '{}');
-    expect(body.error).toBe('Bad Request');
-    expect(body.message).toContain('documentId is required');
-  });
-
-  it('should return 404 if document does not exist', async () => {
-    // Arrange
-    const documentId = 'nonexistent-doc';
-    const event = makeEvent(documentId);
-    const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce(undefined);
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    expect(result.statusCode).toBe(404);
-    const body = JSON.parse(result.body || '{}');
-    expect(body.error).toBe('Not Found');
-    expect(body.message).toContain(documentId);
-  });
-
-  it('should call SyncService.pollStatus with documentId and jobId', async () => {
-    // Arrange
-    const documentId = 'doc-123';
-    const jobId = 'job-456';
-    const updatedAt = new Date().toISOString();
-    const event = makeEvent(documentId);
-    const context = makeContext();
-
-    vi.mocked(DocumentRepository.getById).mockResolvedValueOnce({
-      documentId,
-      filename: 'resume.pdf',
-      uploadedAt: new Date().toISOString(),
-      contentType: 'application/pdf',
-      sizeBytes: 1024,
-      syncStatus: SyncStatus.IN_PROGRESS,
-      bedrockSyncJobId: jobId,
-    });
-
-    vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
-      syncStatus: SyncStatus.COMPLETED,
-      updatedAt,
-    });
-
-    // Act
-    await handle(event, context);
-
-    // Assert
-    expect(SyncService.pollStatus).toHaveBeenCalledWith(documentId, jobId);
-  });
-
   it('should return 500 on unexpected error', async () => {
     // Arrange
-    const documentId = 'doc-123';
-    const event = makeEvent(documentId);
+    const event = makeEvent();
     const context = makeContext();
-    const testError = new Error('Unexpected error');
 
-    vi.mocked(DocumentRepository.getById).mockRejectedValueOnce(testError);
+    vi.mocked(DocumentRepository.listByStatus).mockRejectedValueOnce(new Error('DynamoDB failure'));
 
     // Act
     const result = await handle(event, context);
@@ -285,6 +228,6 @@ describe('sync-status handler', () => {
     expect(result.statusCode).toBe(500);
     const body = JSON.parse(result.body || '{}');
     expect(body.error).toBe('Internal Server Error');
-    expect(body.message).toBe('Unexpected error');
+    expect(body.message).toBe('DynamoDB failure');
   });
 });

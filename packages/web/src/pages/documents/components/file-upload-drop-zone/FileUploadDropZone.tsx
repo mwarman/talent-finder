@@ -154,7 +154,7 @@ export const FileUploadDropZone = ({ testId = 'file-upload-drop-zone' }: FileUpl
         <div data-testid={`${testId}-queue`} className="space-y-3">
           {uploadQueue.map((item) => (
             <Card key={item.id} data-testid={`${testId}-item-${item.id}`} className="p-4">
-              <div className="mb-3 flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   {item.isCompleted ? (
                     <CheckCircle2

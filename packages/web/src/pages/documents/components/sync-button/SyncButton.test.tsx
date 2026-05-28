@@ -83,7 +83,7 @@ describe('SyncButton', () => {
     expect(button).toBeDisabled();
   });
 
-  it('should call mutate with document ID when clicked', async () => {
+  it('should call mutate with no arguments when clicked', async () => {
     const mockMutate = vi.fn();
     setupMock(false, mockMutate);
     const user = await userEvent.setup();
@@ -93,7 +93,7 @@ describe('SyncButton', () => {
     const button = screen.getByTestId('sync-btn');
     await user.click(button);
 
-    expect(mockMutate).toHaveBeenCalledWith('doc-123');
+    expect(mockMutate).toHaveBeenCalledWith();
   });
 
   it('should show loading state and disabled button during sync', () => {

@@ -21,14 +21,14 @@ interface SyncButtonProps {
  * @param testId - Optional test ID for testing
  * @returns JSX.Element
  */
-export const SyncButton = ({ documentId, status, testId }: SyncButtonProps): JSX.Element => {
+export const SyncButton = ({ documentId: _documentId, status, testId }: SyncButtonProps): JSX.Element => {
   const { mutate, isPending } = useSyncDocument();
 
   // Button is only enabled for PENDING or FAILED documents
   const isEnabled = status === SyncStatus.PENDING || status === SyncStatus.FAILED;
 
   const handleSync = (): void => {
-    mutate(documentId);
+    mutate();
   };
 
   return (

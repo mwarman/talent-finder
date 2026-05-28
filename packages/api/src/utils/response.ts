@@ -79,6 +79,17 @@ export const response = {
     };
   },
 
+  conflict(error: string = 'Conflict', message: string = ''): ApiResponse {
+    return {
+      statusCode: 409,
+      body: JSON.stringify({
+        error,
+        message,
+      } as ApiErrorResponse),
+      headers: DEFAULT_HEADERS,
+    };
+  },
+
   tooManyRequests(error: string = 'Too Many Requests', message: string = ''): ApiResponse {
     return {
       statusCode: 429,
