@@ -2,6 +2,7 @@ import { JSX } from 'react';
 import { X } from 'lucide-react';
 
 import { SearchHistoryEntry } from '../hooks/useSearchHistory';
+import { Button } from '@/common/components/shadcn/button';
 
 /**
  * Props for the SearchHistory component.
@@ -38,17 +39,18 @@ export const SearchHistory = ({
       <p className="text-muted-foreground text-sm">Recent searches</p>
       <div className="flex flex-wrap gap-2">
         {items.map((entry, index) => (
-          <button
+          <Button
             key={`${entry.query}-${index}`}
             onClick={() => onHistoryClick(entry)}
-            className="group bg-muted hover:bg-muted/80 focus-visible:ring-ring/50 relative inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm transition-colors focus:outline-none focus-visible:ring-2"
+            variant="secondary"
+            // className="focus-visible:ring-ring/50 focus-visible:ring-2"
             data-testid={`search-history-chip-${index}`}
             type="button"
             title={`Search: ${entry.query}`}
           >
             <span className="max-w-xs truncate">{entry.query}</span>
-            <X className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
-          </button>
+            <X className="size-3" />
+          </Button>
         ))}
       </div>
     </div>

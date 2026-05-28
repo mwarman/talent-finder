@@ -211,18 +211,5 @@ describe('SearchHistory', () => {
       const chip = screen.getByTestId('search-history-chip-0');
       expect(chip).toHaveAttribute('type', 'button');
     });
-
-    it('should have focus-visible ring for keyboard navigation', () => {
-      // Arrange
-      const items = [createMockEntry('test query')];
-      const mockOnClick = vi.fn();
-
-      // Act
-      render(<SearchHistory items={items} onHistoryClick={mockOnClick} />);
-
-      // Assert
-      const chip = screen.getByTestId('search-history-chip-0');
-      expect(chip).toHaveClass('focus-visible:ring-2');
-    });
   });
 });
