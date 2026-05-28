@@ -10,6 +10,9 @@ import { Skeleton } from '@/common/components/shadcn/skeleton';
 import { CitationCard } from './CitationCard';
 import { Markdown } from '@/common/components/markdown/Markdown';
 
+/**
+ * Props for the SearchResponse component.
+ */
 interface SearchResponseProps {
   data?: QueryResponse;
   isLoading: boolean;
@@ -23,12 +26,13 @@ interface SearchResponseProps {
  * SearchResponse component - displays the query response with answer and citations.
  * Handles loading, error, empty, and success states.
  *
- * @param data - The QueryResponse from the API (answer + citations)
- * @param isLoading - Whether the request is in progress
- * @param isError - Whether the request resulted in an error
- * @param error - The error object if an error occurred
- * @param inputRef - Ref to the search input for "Try again" focus action
- * @param testId - Optional test ID
+ * @param props - Component props
+ * @param props.data - The QueryResponse from the API (answer + citations)
+ * @param props.isLoading - Whether the request is in progress
+ * @param props.isError - Whether the request resulted in an error
+ * @param props.error - The error object if an error occurred
+ * @param props.inputRef - Ref to the search input for "Try again" focus action
+ * @param props.testId - Optional test ID
  * @returns JSX.Element
  */
 export const SearchResponse = ({
