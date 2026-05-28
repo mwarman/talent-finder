@@ -3,6 +3,9 @@ import { Citation } from '@talent-finder/shared';
 
 import { Card, CardContent } from '@/common/components/shadcn/card';
 
+/**
+ * Props for the CitationCard component.
+ */
 interface CitationCardProps {
   citation: Citation;
   index: number;
@@ -13,9 +16,10 @@ interface CitationCardProps {
  * CitationCard component - displays a single citation from a source document.
  * Renders the citation number, filename, and an excerpt truncated to 200 characters.
  *
- * @param citation - The citation object containing documentId, filename, and excerpt
- * @param index - The index used for numbering (1-based display)
- * @param testId - Optional test ID
+ * @param props - Component props
+ * @param props.citation - The citation object containing documentId, filename, and excerpt
+ * @param props.index - The index used for numbering (1-based display)
+ * @param props.testId - Optional test ID
  * @returns JSX.Element
  */
 export const CitationCard = ({ citation, index, testId }: CitationCardProps): JSX.Element => {
