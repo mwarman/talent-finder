@@ -8,6 +8,7 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/common/compo
 import { Button } from '@/common/components/shadcn/button';
 import { SyncStatusBadge } from '../sync-status/SyncStatusBadge';
 import { SyncButton } from '../sync-button/SyncButton';
+import { DeleteConfirmationDialog } from '../delete-confirmation-dialog/DeleteConfirmationDialog';
 import { useGetDocuments } from '../../hooks/useGetDocuments';
 import { Document } from '@talent-finder/shared';
 
@@ -149,8 +150,13 @@ export const DocumentsTable = (): JSX.Element => {
             <TableCell>
               <SyncStatusBadge status={doc.syncStatus} testId={`sync-badge-${doc.documentId}`} />
             </TableCell>
-            <TableCell>
+            <TableCell className="flex items-center gap-2">
               <SyncButton documentId={doc.documentId} status={doc.syncStatus} testId={`sync-btn-${doc.documentId}`} />
+              <DeleteConfirmationDialog
+                documentId={doc.documentId}
+                filename={doc.filename}
+                testId={`delete-btn-${doc.documentId}`}
+              />
             </TableCell>
           </TableRow>
         ))}
