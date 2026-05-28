@@ -1,5 +1,8 @@
 import { JSX } from 'react';
 
+/**
+ * Props for the SearchPageHeader component.
+ */
 interface SearchPageHeaderProps {
   testId?: string;
 }
@@ -8,7 +11,8 @@ interface SearchPageHeaderProps {
  * SearchPageHeader component displays the page title and description.
  * Located at the top of the search page.
  *
- * @param testId - Optional test ID for the header container
+ * @param props - Component props
+ * @param props.testId - Optional test ID for testing purposes
  * @returns JSX.Element
  */
 export const SearchPageHeader = ({ testId = 'search-page-header' }: SearchPageHeaderProps): JSX.Element => {
