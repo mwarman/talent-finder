@@ -1,4 +1,4 @@
-import { useRef, useState, forwardRef } from 'react';
+import { useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/common/components/shadcn/button';
@@ -28,14 +28,35 @@ interface SearchInputProps {
  * @param props.testId - Optional test ID
  * @returns JSX.Element
  */
-export const SearchInput = forwardRef<HTMLTextAreaElement, SearchInputProps>(
+export interface SearchInputHandle {
+  /**
+   * Populates the textarea with a query from history (does not auto-submit).
+   * Focuses the textarea after population.
+   *
+   * @param query - The query text to populate
+   */
+  setQueryFromHistory: (query: string) => void;
+}
+
+export const SearchInput = forwardRef<SearchInputHandle, SearchInputProps>(
   ({ onSubmit, isLoading = false, testId }, ref) => {
     const [query, setQuery] = useState<string>('');
     const [validationError, setValidationError] = useState<string>('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Forward the ref if provided, otherwise use local ref
-    const inputRef = ref || textareaRef;
+    // Expose methods to parent via useImperativeHandle
+    useImperativeHandle(ref, () => ({
+      setQueryFromHistory: (historyQuery: string): void => {
+        // Populate the textarea with the history query
+        setQuery(historyQuery);
+        // Clear any validation errors
+        setValidationError('');
+        // Focus the textarea after a brief delay to ensure React state is updated
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 0);
+      },
+    }));
 
     const charCount = query.length;
     const isAtLimit = charCount >= MAX_CHARACTERS;
@@ -56,9 +77,7 @@ export const SearchInput = forwardRef<HTMLTextAreaElement, SearchInputProps>(
 
       // Clear input and return focus
       setQuery('');
-      if (typeof inputRef === 'object' && inputRef !== null) {
-        inputRef.current?.focus();
-      }
+      textareaRef.current?.focus();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -93,7 +112,7 @@ export const SearchInput = forwardRef<HTMLTextAreaElement, SearchInputProps>(
     return (
       <div data-testid={testId} className="space-y-2">
         <Textarea
-          ref={inputRef}
+          ref={textareaRef}
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
