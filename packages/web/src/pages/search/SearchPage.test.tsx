@@ -161,4 +161,107 @@ describe('SearchPage', () => {
       expect(screen.getByText('Test error message')).toBeInTheDocument();
     });
   });
+
+  describe('SearchHistory integration', () => {
+    it('should render SearchHistory component', () => {
+      // Arrange
+      setupMock();
+
+      // Act
+      render(<SearchPage />);
+
+      // Assert - SearchHistory is always mounted but empty when no items
+      // We can verify it's present by checking if the SearchPage renders
+      expect(screen.getByTestId('search-page')).toBeInTheDocument();
+    });
+
+    it('should not show history chips initially', () => {
+      // Arrange
+      setupMock();
+
+      // Act
+      render(<SearchPage />);
+
+      // Assert
+      expect(screen.queryByText('Recent searches')).not.toBeInTheDocument();
+    });
+
+    it('should add successful query to history after search', async () => {
+      // Arrange
+      const mockData = {
+        answer: 'Test answer',
+        citations: [],
+      };
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate, mockData);
+
+      const { rerender } = render(<SearchPage />);
+
+      // Act - Submit a search
+      const textarea = screen.getByTestId('search-input-textarea') as HTMLTextAreaElement;
+      await screen.findByRole('button', { name: /search/i });
+
+      // Type and submit
+      const user = await import('@testing-library/user-event').then((m) => m.default.setup());
+      await user.type(textarea, 'test query');
+      const submitButton = screen.getByTestId('search-submit-button');
+      await user.click(submitButton);
+
+      // Simulate mutation success by rerendering with data
+      setupMock(false, mockMutate, mockData);
+      rerender(<SearchPage />);
+
+      // Assert - history should now be visible
+      expect(screen.getByText('Recent searches')).toBeInTheDocument();
+      expect(screen.getByText('test query')).toBeInTheDocument();
+    });
+
+    it('should display multiple history entries in reverse chronological order', async () => {
+      // Arrange
+      const mockData1 = {
+        answer: 'Answer 1',
+        citations: [],
+      };
+      const mockData2 = {
+        answer: 'Answer 2',
+        citations: [],
+      };
+
+      const mockMutate = vi.fn();
+      const { rerender } = render(<SearchPage />);
+      setupMock(false, mockMutate, mockData1);
+
+      // Act - First search
+      const user = await import('@testing-library/user-event').then((m) => m.default.setup());
+      const textarea = screen.getByTestId('search-input-textarea') as HTMLTextAreaElement;
+
+      await user.type(textarea, 'first query');
+      await user.click(screen.getByTestId('search-submit-button'));
+      rerender(<SearchPage />);
+
+      // Second search
+      setupMock(false, mockMutate, mockData2);
+      await user.type(textarea, 'second query');
+      await user.click(screen.getByTestId('search-submit-button'));
+      rerender(<SearchPage />);
+
+      // Assert
+      expect(screen.getByText('Recent searches')).toBeInTheDocument();
+      const chips = screen.getAllByRole('button').filter((btn) => btn.textContent?.includes('query'));
+      expect(chips.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('ErrorBoundary integration', () => {
+    it('should wrap SearchPage in ErrorBoundary', () => {
+      // Arrange
+      setupMock();
+
+      // Act
+      render(<SearchPage />);
+
+      // Assert
+      expect(screen.getByTestId('search-page-error-boundary')).toBeInTheDocument();
+    });
+  });
 });

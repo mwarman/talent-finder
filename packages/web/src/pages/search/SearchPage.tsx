@@ -1,41 +1,72 @@
-import { JSX, useRef } from 'react';
+import { JSX, useRef, useState, useEffect } from 'react';
 
+import { QueryResponse } from '@talent-finder/shared';
+import { ErrorBoundary } from '@/common/components/error-boundary/ErrorBoundary';
 import { useSearchQuery } from './hooks/useSearchQuery';
-import { SearchInput } from './components/SearchInput';
+import { useSearchHistory, SearchHistoryEntry } from './hooks/useSearchHistory';
+import { SearchInput, SearchInputHandle } from './components/SearchInput';
 import { SearchPageHeader } from './components/search-page-header/SearchPageHeader';
 import { SearchResponse } from './components/SearchResponse';
+import { SearchHistory } from './components/SearchHistory';
 
 /**
  * SearchPage component - provides the search interface for querying documents.
  * Integrates SearchInput component with the useSearchQuery mutation hook.
  * Displays query results with SearchResponse component.
+ * Manages query history (last 5 queries) with in-memory storage.
  * @returns JSX.Element
  */
 export const SearchPage = (): JSX.Element => {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<SearchInputHandle>(null);
   const { mutate, isLoading, data, isError, error } = useSearchQuery();
+  const { history, addToHistory } = useSearchHistory();
+  const [currentQuery, setCurrentQuery] = useState<string>('');
+  const [displayedResponse, setDisplayedResponse] = useState<QueryResponse | undefined>(undefined);
+
+  // Add to history when a query succeeds
+  useEffect(() => {
+    if (data && currentQuery && !isLoading) {
+      addToHistory(currentQuery, data);
+      // Clear displayed response when new search is performed
+      setDisplayedResponse(undefined);
+      // Reset currentQuery after adding to history
+      setCurrentQuery('');
+    }
+  }, [data, currentQuery, isLoading, addToHistory]);
 
   const handleSearch = (query: string): void => {
+    setCurrentQuery(query);
     mutate({ query });
   };
 
+  const handleHistoryClick = (entry: SearchHistoryEntry): void => {
+    // Populate the textarea with the previous query
+    inputRef.current?.setQueryFromHistory(entry.query);
+    // Restore the associated response
+    setDisplayedResponse(entry.result);
+  };
+
   return (
-    <div data-testid="search-page" className="mx-auto max-w-7xl space-y-6 p-8">
-      <SearchPageHeader />
+    <ErrorBoundary testId="search-page-error-boundary">
+      <div data-testid="search-page" className="mx-auto max-w-7xl space-y-6 p-8">
+        <SearchPageHeader />
 
-      <SearchInput ref={inputRef} onSubmit={handleSearch} isLoading={isLoading} testId="search-page-input" />
+        {/* Query History */}
+        <SearchHistory items={history} onHistoryClick={handleHistoryClick} testId="search-page-history" />
 
-      {/* Display search results */}
-      {(data || isLoading || isError) && (
-        <SearchResponse
-          data={data}
-          isLoading={isLoading}
-          isError={isError}
-          error={error}
-          inputRef={inputRef}
-          testId="search-page-response"
-        />
-      )}
-    </div>
+        <SearchInput ref={inputRef} onSubmit={handleSearch} isLoading={isLoading} testId="search-page-input" />
+
+        {/* Display search results */}
+        {(data || displayedResponse || isLoading || isError) && (
+          <SearchResponse
+            data={displayedResponse ?? data}
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            testId="search-page-response"
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };
