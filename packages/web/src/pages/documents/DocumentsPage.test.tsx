@@ -28,6 +28,22 @@ describe('DocumentsPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /documents/i })).toBeInTheDocument();
   });
 
+  it('should render page description', () => {
+    // Arrange
+    vi.spyOn(useGetDocumentsModule, 'useGetDocuments').mockReturnValue({
+      documents: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    // Act
+    render(<DocumentsPage />);
+
+    // Assert
+    expect(screen.getByText('Manage and sync your documents')).toBeInTheDocument();
+  });
+
   it('should render file upload drop zone', () => {
     // Arrange
     vi.spyOn(useGetDocumentsModule, 'useGetDocuments').mockReturnValue({
@@ -58,5 +74,37 @@ describe('DocumentsPage', () => {
 
     // Assert
     expect(screen.getByTestId('empty-documents-state')).toBeInTheDocument();
+  });
+
+  it('should wrap page content with error boundary', () => {
+    // Arrange
+    vi.spyOn(useGetDocumentsModule, 'useGetDocuments').mockReturnValue({
+      documents: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    // Act
+    render(<DocumentsPage />);
+
+    // Assert
+    expect(screen.getByTestId('documents-page-error-boundary')).toBeInTheDocument();
+  });
+
+  it('should render header component', () => {
+    // Arrange
+    vi.spyOn(useGetDocumentsModule, 'useGetDocuments').mockReturnValue({
+      documents: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    // Act
+    render(<DocumentsPage />);
+
+    // Assert
+    expect(screen.getByTestId('documents-page-header')).toBeInTheDocument();
   });
 });
