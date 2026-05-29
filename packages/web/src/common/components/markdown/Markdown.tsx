@@ -20,35 +20,35 @@ interface MarkdownProps {
 const overrides = {
   h1: {
     component: ({ children, ...props }: { children: ReactNode }) => (
-      <h1 {...props} className="mb-2 text-xl font-bold">
+      <h1 {...props} className="mt-4 mb-2 text-xl font-bold first:mt-0">
         {children}
       </h1>
     ),
   },
   h2: {
     component: ({ children, ...props }: { children: ReactNode }) => (
-      <h2 {...props} className="mb-2 text-lg font-bold">
+      <h2 {...props} className="mt-4 mb-2 text-lg font-bold first:mt-0">
         {children}
       </h2>
     ),
   },
   h3: {
     component: ({ children, ...props }: { children: ReactNode }) => (
-      <h3 {...props} className="mb-2 text-base font-semibold">
+      <h3 {...props} className="mt-4 mb-2 text-base font-semibold first:mt-0">
         {children}
       </h3>
     ),
   },
   h4: {
     component: ({ children, ...props }: { children: ReactNode }) => (
-      <h4 {...props} className="mb-2 text-sm font-semibold">
+      <h4 {...props} className="mt-4 mb-2 text-sm font-semibold first:mt-0">
         {children}
       </h4>
     ),
   },
   p: {
     component: ({ children, ...props }: { children: ReactNode }) => (
-      <p {...props} className="mb-2 text-sm leading-7">
+      <p {...props} className="mb-2 text-sm leading-5">
         {children}
       </p>
     ),
@@ -69,7 +69,7 @@ const overrides = {
   },
   li: {
     component: ({ children, ...props }: { children: ReactNode }) => (
-      <li {...props} className="mb-1 text-sm leading-7">
+      <li {...props} className="mb-1 text-sm leading-5">
         {children}
       </li>
     ),
