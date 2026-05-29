@@ -4,6 +4,7 @@ import { ReactNode, createElement } from 'react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useUploadDocument } from './useUploadDocument';
 import * as apiClientModule from '@/common/utils/api-client';
+import * as SyncProviderModule from '@/common/providers/SyncProvider';
 
 // Mock the API client
 vi.mock('@/common/utils/api-client', () => ({
@@ -11,6 +12,15 @@ vi.mock('@/common/utils/api-client', () => ({
     post: vi.fn(),
   },
 }));
+
+// Mock SyncProvider
+vi.mock('@/common/providers/SyncProvider', async () => {
+  const actual = await vi.importActual<typeof SyncProviderModule>('@/common/providers/SyncProvider');
+  return {
+    ...actual,
+    useSyncContext: vi.fn(),
+  };
+});
 
 // Mock axios
 vi.mock('axios', () => {
@@ -25,6 +35,7 @@ vi.mock('axios', () => {
 });
 
 import axios from 'axios';
+import { useSyncContext } from '@/common/providers/SyncProvider';
 
 interface AxiosUploadConfig {
   headers: Record<string, string>;
@@ -41,6 +52,7 @@ describe('useUploadDocument', () => {
   let queryClient: QueryClient;
   const mockApiClient = apiClientModule.apiClient as unknown as MockApiClient;
   const mockAxios = axios as ReturnType<typeof vi.fn>;
+  const mockSetSyncNeeded = vi.fn();
 
   const createWrapper = () => {
     return ({ children }: { children: ReactNode }) =>
@@ -55,6 +67,13 @@ describe('useUploadDocument', () => {
       },
     });
     vi.clearAllMocks();
+
+    // Mock useSyncContext
+    (useSyncContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      setSyncNeeded: mockSetSyncNeeded,
+      syncNeeded: false,
+      updateSyncState: vi.fn(),
+    });
 
     // Mock successful presigned URL response
     mockApiClient.post.mockResolvedValue({
