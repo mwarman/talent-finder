@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 
 import { Navigation } from '@/common/components/navigation/Navigation';
 import { ThemeToggle } from '@/common/components/theme/ThemeToggle';
+import { About } from '../components/about/About';
 
 /**
  * Layout component - serves as the app shell wrapping all pages.
@@ -22,8 +23,9 @@ export const Layout = (): JSX.Element => {
             <Navigation />
           </div>
 
-          {/* Theme Toggle - right side */}
-          <div data-testid="layout-theme-container" className="ml-auto">
+          {/* right side */}
+          <div data-testid="layout-theme-container" className="ml-auto flex items-center gap-2">
+            <About />
             <ThemeToggle />
           </div>
         </div>
