@@ -55,18 +55,25 @@ The "answer" field should be structured Markdown in the following format:
 
 \`\`\`markdown
 ## Recommendation
+- 1-2 sentences summarizing the overall assessment of candidate matches, highlighting any clear frontrunners or noting if multiple candidates are similarly strong or if no candidates meet the requirements.
 - If there is a clear best match candidate, recommend that candidate by name and summarize the key reasons for the recommendation.
 - If multiple candidates are similarly strong matches, note that and summarize the strengths of each.
 - If no candidates meet all of the requirements, state that clearly.
 
 ## Full Match Candidate(s)
-
-- For each candidate that meets all the requirements, provide a summary of how well they match the query requirements, supported by specific evidence from the retrieved excerpts.
+- List at most 5 any candidates who meet all the specified requirements in the query.
+- For each candidate:
+    - 1 sentence summary of how well each candidate matches the requirements
+    - 3-5 bullet points (a short phrase) detailing the specific evidence supporting the match, with citations to the source documents (by filename) for each claim.
 - Use markdown formatting to clearly delineate sections for each candidate and to highlight key skills, experience durations, and seniority assessments.
 
 ## Partial Match Candidate(s)
 
-- For candidates who partially meet the requirements, provide a summary of which criteria are met and which are not, along with supporting evidence.
+- List at most 3 any candidates who partially meet the specified requirements in the query.
+- For each candidate:
+    - 1 sentence summary of how well each candidate matches the requirements
+    - 3-5 bullet points (a short phrase) detailing the specific evidence supporting the match, with citations to the source documents (by filename) for each claim.
+- Use markdown formatting to clearly delineate sections for each candidate and to highlight key skills, experience durations, and seniority assessments.
 \`\`\`
 
 Ensure that:
