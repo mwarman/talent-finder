@@ -49,19 +49,31 @@ Analyze the retrieved resume excerpts above to address the query. Apply the foll
 
 ## Output Format
 
-Respond with a JSON object containing the following structure:
+Respond with a structured JSON output that matches the supplied JSON schema exactly.
 
-\`\`\`json
-{
-  "answer": "A prose assessment that directly addresses each requirement in the query, with inline citations referencing document filenames for every claim made.",
-  "citations": [
-    {
-      "documentId": "unique_doc_identifier",
-      "filename": "document_filename.pdf",
-      "excerpt": "The specific text excerpt from the document that supports a claim in the answer"
-    }
-  ]
-}
+The "answer" field should be structured Markdown in the following format:
+
+\`\`\`markdown
+## Recommendation
+- 1-2 sentences summarizing the overall assessment of candidate matches, highlighting any clear frontrunners or noting if multiple candidates are similarly strong or if no candidates meet the requirements.
+- If there is a clear best match candidate, recommend that candidate by name and summarize the key reasons for the recommendation.
+- If multiple candidates are similarly strong matches, note that and summarize the strengths of each.
+- If no candidates meet all of the requirements, state that clearly.
+
+## Full Match Candidate(s)
+- List at most 3 any candidates who meet all the specified requirements in the query.
+- For each candidate:
+    - 1 sentence summary of how well each candidate matches the requirements
+    - 3-5 bullet points (a short phrase) detailing the specific evidence supporting the match, with citations to the source documents (by filename) for each claim.
+- Use markdown formatting to clearly delineate sections for each candidate and to highlight key skills, experience durations, and seniority assessments.
+
+## Partial Match Candidate(s)
+
+- List at most 2 any candidates who partially meet the specified requirements in the query.
+- For each candidate:
+    - 1 sentence summary of how well each candidate matches the requirements
+    - 3-5 bullet points (a short phrase) detailing the specific evidence supporting the match, with citations to the source documents (by filename) for each claim.
+- Use markdown formatting to clearly delineate sections for each candidate and to highlight key skills, experience durations, and seniority assessments.
 \`\`\`
 
 Ensure that:

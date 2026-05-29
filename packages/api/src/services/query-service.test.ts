@@ -153,6 +153,10 @@ describe('QueryService', () => {
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: new TextEncoder().encode(
           JSON.stringify({
+            usage: {
+              inputTokens: 100,
+              outputTokens: 200,
+            },
             content: [
               {
                 text: JSON.stringify({
@@ -202,6 +206,10 @@ describe('QueryService', () => {
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: new TextEncoder().encode(
           JSON.stringify({
+            usage: {
+              inputTokens: 50,
+              outputTokens: 50,
+            },
             content: [
               {
                 text: JSON.stringify({
@@ -306,6 +314,10 @@ describe('QueryService', () => {
       mockBedrockRuntimeSend.mockResolvedValueOnce({
         body: new TextEncoder().encode(
           JSON.stringify({
+            usage: {
+              inputTokens: 50,
+              outputTokens: 50,
+            },
             content: [
               {
                 text: JSON.stringify({

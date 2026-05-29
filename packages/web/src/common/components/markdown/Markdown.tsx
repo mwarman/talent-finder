@@ -1,6 +1,7 @@
-import { cn } from '@/common/utils/css';
+import { JSX, ReactNode } from 'react';
 import { default as MarkdownToJsx } from 'markdown-to-jsx';
-import { JSX } from 'react';
+
+import { cn } from '@/common/utils/css';
 
 /**
  * Props for the Markdown component.
@@ -10,6 +11,84 @@ interface MarkdownProps {
   className?: string;
   testId?: string;
 }
+
+/**
+ * Overrides for MarkdownToJsx to apply custom styling to Markdown elements.
+ * Each Markdown element (h1, h2, p, ul, etc.) is mapped to a React component with Tailwind CSS classes.
+ * This ensures consistent styling across all rendered Markdown content.
+ */
+const overrides = {
+  h1: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <h1 {...props} className="mt-4 mb-2 text-xl font-bold first:mt-0">
+        {children}
+      </h1>
+    ),
+  },
+  h2: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <h2 {...props} className="mt-4 mb-2 text-lg font-bold first:mt-0">
+        {children}
+      </h2>
+    ),
+  },
+  h3: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <h3 {...props} className="mt-4 mb-2 text-base font-semibold first:mt-0">
+        {children}
+      </h3>
+    ),
+  },
+  h4: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <h4 {...props} className="mt-4 mb-2 text-sm font-semibold first:mt-0">
+        {children}
+      </h4>
+    ),
+  },
+  p: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <p {...props} className="mb-2 text-sm leading-5">
+        {children}
+      </p>
+    ),
+  },
+  ul: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <ul {...props} className="mb-2 ml-6 list-disc">
+        {children}
+      </ul>
+    ),
+  },
+  ol: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <ol {...props} className="mb-2 ml-6 list-decimal">
+        {children}
+      </ol>
+    ),
+  },
+  li: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <li {...props} className="mb-1 text-sm leading-5">
+        {children}
+      </li>
+    ),
+  },
+  strong: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <strong {...props} className="font-semibold">
+        {children}
+      </strong>
+    ),
+  },
+  em: {
+    component: ({ children, ...props }: { children: ReactNode }) => (
+      <em {...props} className="italic">
+        {children}
+      </em>
+    ),
+  },
+};
 
 /**
  * Markdown component for rendering Markdown content.
@@ -27,8 +106,8 @@ interface MarkdownProps {
  */
 export const Markdown = ({ children, className, testId = 'markdown' }: MarkdownProps): JSX.Element => {
   return (
-    <div className={cn('[&_p]:mb-2', className)} data-testid={testId}>
-      <MarkdownToJsx>{children}</MarkdownToJsx>
+    <div className={cn('', className)} data-testid={testId}>
+      <MarkdownToJsx options={{ overrides }}>{children}</MarkdownToJsx>
     </div>
   );
 };

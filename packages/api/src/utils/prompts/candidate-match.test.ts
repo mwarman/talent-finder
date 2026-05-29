@@ -19,11 +19,13 @@ describe('CANDIDATE_MATCH_PROMPT', () => {
     expect(CANDIDATE_MATCH_PROMPT).toContain('{userQuery}');
   });
 
-  it('should include JSON output format structure guidance', () => {
+  it('should include answer format structure guidance', () => {
     // Arrange & Act & Assert
-    expect(CANDIDATE_MATCH_PROMPT).toContain('JSON');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('markdown');
     expect(CANDIDATE_MATCH_PROMPT).toContain('"answer"');
-    expect(CANDIDATE_MATCH_PROMPT).toContain('"citations"');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('## Recommendation');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('## Full Match Candidate(s)');
+    expect(CANDIDATE_MATCH_PROMPT).toContain('## Partial Match Candidate(s)');
   });
 
   it('should instruct citation of resume documents by filename', () => {
