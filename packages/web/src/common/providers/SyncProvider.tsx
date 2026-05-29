@@ -17,7 +17,7 @@ interface SyncContextValue {
  */
 const SyncContext = createContext<SyncContextValue | undefined>(undefined);
 
-const SYNC_CONTEXT_STORAGE_KEY = 'sync-context';
+const SYNC_CONTEXT_STORAGE_KEY = 'talent-finder-sync-context';
 
 /**
  * Determines if sync is needed based on the current documents.

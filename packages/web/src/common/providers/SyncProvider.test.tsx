@@ -66,7 +66,7 @@ describe('SyncProvider', () => {
       });
 
       // Assert
-      const stored = localStorage.getItem('sync-context');
+      const stored = localStorage.getItem('talent-finder-sync-context');
       expect(stored).toBeDefined();
       const parsed = JSON.parse(stored!);
       expect(parsed.syncNeeded).toBe(false);
@@ -74,7 +74,7 @@ describe('SyncProvider', () => {
 
     it('should restore state from localStorage on mount', () => {
       // Arrange
-      localStorage.setItem('sync-context', JSON.stringify({ syncNeeded: false }));
+      localStorage.setItem('talent-finder-sync-context', JSON.stringify({ syncNeeded: false }));
 
       const wrapper = ({ children }: { children: React.ReactNode }) => <SyncProvider>{children}</SyncProvider>;
 
@@ -155,7 +155,7 @@ describe('SyncProvider', () => {
   describe('edge cases', () => {
     it('should default to syncNeeded: true if localStorage is corrupted', () => {
       // Arrange
-      localStorage.setItem('sync-context', 'corrupted-json');
+      localStorage.setItem('talent-finder-talent-finder-sync-context', 'corrupted-json');
 
       const wrapper = ({ children }: { children: React.ReactNode }) => <SyncProvider>{children}</SyncProvider>;
 
