@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 
 import { Navigation } from '@/common/components/navigation/Navigation';
 import { ThemeToggle } from '@/common/components/theme/ThemeToggle';
+import { About } from '../components/about/About';
 
 /**
  * Layout component - serves as the app shell wrapping all pages.
@@ -17,13 +18,19 @@ export const Layout = (): JSX.Element => {
       {/* Header */}
       <header data-testid="layout-header" className="border-border bg-background sticky top-0 z-40 border-b">
         <div className="flex items-center justify-between gap-4 px-4 py-4 md:px-6">
+          {/* App Title / Logo */}
+          <div className="text-lg font-bold" data-testid="layout-title">
+            Talent Finder
+          </div>
+
           {/* Navigation - left side */}
-          <div data-testid="layout-nav-container" className="flex-1">
+          <div data-testid="layout-header-left">
             <Navigation />
           </div>
 
-          {/* Theme Toggle - right side */}
-          <div data-testid="layout-theme-container" className="ml-auto">
+          {/* right side */}
+          <div data-testid="layout-header-right" className="ml-auto flex items-center gap-2">
+            <About />
             <ThemeToggle />
           </div>
         </div>
