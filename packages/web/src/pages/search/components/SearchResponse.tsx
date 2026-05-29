@@ -14,6 +14,7 @@ import { Markdown } from '@/common/components/markdown/Markdown';
  * Props for the SearchResponse component.
  */
 interface SearchResponseProps {
+  query?: string;
   data?: QueryResponse;
   isLoading: boolean;
   isError: boolean;
@@ -27,6 +28,7 @@ interface SearchResponseProps {
  * Handles loading, error, empty, and success states.
  *
  * @param props - Component props
+ * @param props.query - The original search query text
  * @param props.data - The QueryResponse from the API (answer + citations)
  * @param props.isLoading - Whether the request is in progress
  * @param props.isError - Whether the request resulted in an error
@@ -36,6 +38,7 @@ interface SearchResponseProps {
  * @returns JSX.Element
  */
 export const SearchResponse = ({
+  query,
   data,
   isLoading,
   isError,
@@ -71,6 +74,19 @@ export const SearchResponse = ({
   if (isLoading) {
     return (
       <div data-testid={testId} className="space-y-8">
+        {/* Query skeleton - matches Card structure */}
+        <div data-testid={`${testId}-loading-query`}>
+          <Card>
+            <CardHeader className="border-b">
+              <Skeleton className="h-6 w-20" />
+            </CardHeader>
+            <CardContent className="space-y-3 pt-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Answer skeleton - matches Card structure */}
         <div data-testid={`${testId}-loading-answer`}>
           <Card>
@@ -105,7 +121,7 @@ export const SearchResponse = ({
   }
 
   // Empty result state
-  if (!data || data.citations.length === 0 || !data.answer?.trim()) {
+  if (!data || !data.answer?.trim()) {
     return (
       <div data-testid={testId}>
         <Empty className="border-muted-foreground/30 bg-muted/30 border-dashed" data-testid={`${testId}-empty-state`}>
@@ -120,6 +136,22 @@ export const SearchResponse = ({
   // Success state - answer and citations
   return (
     <div data-testid={testId} className="space-y-8">
+      {/* Query block - display original query text */}
+      {query && (
+        <div data-testid={`${testId}-query-section`}>
+          <Card data-testid={`${testId}-query-card`}>
+            <CardHeader className="border-b">
+              <CardTitle>Query</CardTitle>
+            </CardHeader>
+            <CardContent className="prose prose-sm text-foreground dark:prose-invert max-w-none">
+              <Markdown className="text-base" testId={`${testId}-query-markdown`}>
+                {query}
+              </Markdown>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Answer block */}
       <div data-testid={`${testId}-answer-section`}>
         <Card data-testid={`${testId}-answer-card`}>

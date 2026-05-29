@@ -51,6 +51,78 @@ describe('SearchResponse', () => {
     });
   });
 
+  describe('Query display section', () => {
+    it('should render query text in a card when query prop is provided', () => {
+      // Arrange
+      const testQuery = 'Find senior developers with React experience';
+
+      // Act
+      render(
+        <SearchResponse
+          query={testQuery}
+          data={mockQueryResponse}
+          isLoading={false}
+          isError={false}
+          error={null}
+          testId="response"
+        />,
+      );
+
+      // Assert
+      const queryCard = screen.getByTestId('response-query-card');
+      expect(queryCard).toBeInTheDocument();
+      expect(queryCard).toHaveTextContent(testQuery);
+    });
+
+    it('should have "Query" header in query card', () => {
+      // Arrange
+      const testQuery = 'Test query';
+
+      // Act
+      render(
+        <SearchResponse
+          query={testQuery}
+          data={mockQueryResponse}
+          isLoading={false}
+          isError={false}
+          error={null}
+          testId="response"
+        />,
+      );
+
+      // Assert
+      const queryCard = screen.getByTestId('response-query-card');
+      expect(queryCard).toHaveTextContent('Query');
+    });
+
+    it('should not render query section when query prop is not provided', () => {
+      // Arrange & Act
+      render(
+        <SearchResponse data={mockQueryResponse} isLoading={false} isError={false} error={null} testId="response" />,
+      );
+
+      // Assert
+      expect(screen.queryByTestId('response-query-card')).not.toBeInTheDocument();
+    });
+
+    it('should not render query section when query is empty string', () => {
+      // Arrange & Act
+      render(
+        <SearchResponse
+          query=""
+          data={mockQueryResponse}
+          isLoading={false}
+          isError={false}
+          error={null}
+          testId="response"
+        />,
+      );
+
+      // Assert
+      expect(screen.queryByTestId('response-query-card')).not.toBeInTheDocument();
+    });
+  });
+
   describe('AC-02: Citations render as numbered list', () => {
     it('should render all citations with correct numbering', () => {
       // Arrange & Act
@@ -120,23 +192,6 @@ describe('SearchResponse', () => {
     it('should render empty state when data is undefined', () => {
       // Arrange & Act
       render(<SearchResponse data={undefined} isLoading={false} isError={false} error={null} testId="response" />);
-
-      // Assert
-      expect(screen.getByTestId('response-empty-state')).toBeInTheDocument();
-      expect(screen.getByText(/No matching candidates found/)).toBeInTheDocument();
-    });
-
-    it('should render empty state when citations array is empty', () => {
-      // Arrange
-      const emptyDataResponse: QueryResponse = {
-        answer: 'Some answer',
-        citations: [],
-      };
-
-      // Act
-      render(
-        <SearchResponse data={emptyDataResponse} isLoading={false} isError={false} error={null} testId="response" />,
-      );
 
       // Assert
       expect(screen.getByTestId('response-empty-state')).toBeInTheDocument();
