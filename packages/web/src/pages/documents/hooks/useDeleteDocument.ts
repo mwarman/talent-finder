@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/api-error';
+import { useSyncContext } from '@/common/providers/SyncProvider';
 import { DOCUMENTS_QUERY_KEY } from './useGetDocuments';
 
 interface UseDeleteDocumentReturn {
@@ -20,12 +21,15 @@ interface UseDeleteDocumentReturn {
  */
 export const useDeleteDocument = (): UseDeleteDocumentReturn => {
   const queryClient = useQueryClient();
+  const { setSyncNeeded } = useSyncContext();
 
   const mutation = useMutation({
     mutationFn: async (documentId: string) => {
       await apiClient.delete(`/documents/${documentId}`);
     },
     onSuccess: () => {
+      // Mark that a document has been deleted, so sync is needed
+      setSyncNeeded(true);
       // Invalidate the documents query to trigger a refetch and remove the deleted row
       queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY });
     },
