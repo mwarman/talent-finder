@@ -61,7 +61,7 @@ The "answer" field should be structured Markdown in the following format:
 - If no candidates meet all of the requirements, state that clearly.
 
 ## Full Match Candidate(s)
-- List at most 5 any candidates who meet all the specified requirements in the query.
+- List at most 3 any candidates who meet all the specified requirements in the query.
 - For each candidate:
     - 1 sentence summary of how well each candidate matches the requirements
     - 3-5 bullet points (a short phrase) detailing the specific evidence supporting the match, with citations to the source documents (by filename) for each claim.
@@ -69,7 +69,7 @@ The "answer" field should be structured Markdown in the following format:
 
 ## Partial Match Candidate(s)
 
-- List at most 3 any candidates who partially meet the specified requirements in the query.
+- List at most 2 any candidates who partially meet the specified requirements in the query.
 - For each candidate:
     - 1 sentence summary of how well each candidate matches the requirements
     - 3-5 bullet points (a short phrase) detailing the specific evidence supporting the match, with citations to the source documents (by filename) for each claim.
