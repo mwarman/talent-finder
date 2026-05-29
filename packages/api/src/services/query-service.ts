@@ -144,7 +144,15 @@ const invokeModel = async (prompt: string): Promise<QueryResponse> => {
     const parsedResponse = JSON.parse(responseContent);
     const validatedResponse = QueryResponseSchema.parse(parsedResponse);
 
-    logger.debug({ citationCount: validatedResponse.citations.length }, '[QueryService] < invokeModel');
+    logger.debug(
+      {
+        responseLength: responseContent.length,
+        answerLength: validatedResponse.answer.length,
+        citationCount: validatedResponse.citations.length,
+        tokens: { input: responseBody.usage.input_tokens, output: responseBody.usage.output_tokens },
+      },
+      '[QueryService] < invokeModel',
+    );
     return validatedResponse;
   } catch (error) {
     // All model invocation errors (excluding throttling which is rare here) are treated as invocation errors
