@@ -49,19 +49,24 @@ Analyze the retrieved resume excerpts above to address the query. Apply the foll
 
 ## Output Format
 
-Respond with a JSON object containing the following structure:
+Respond with a structured JSON output that matches the supplied JSON schema exactly.
 
-\`\`\`json
-{
-  "answer": "A prose assessment that directly addresses each requirement in the query, with inline citations referencing document filenames for every claim made.",
-  "citations": [
-    {
-      "documentId": "unique_doc_identifier",
-      "filename": "document_filename.pdf",
-      "excerpt": "The specific text excerpt from the document that supports a claim in the answer"
-    }
-  ]
-}
+The "answer" field should be structured Markdown in the following format:
+
+\`\`\`markdown
+## Recommendation
+- If there is a clear best match candidate, recommend that candidate by name and summarize the key reasons for the recommendation.
+- If multiple candidates are similarly strong matches, note that and summarize the strengths of each.
+- If no candidates meet all of the requirements, state that clearly.
+
+## Full Match Candidate(s)
+
+- For each candidate that meets all the requirements, provide a summary of how well they match the query requirements, supported by specific evidence from the retrieved excerpts.
+- Use markdown formatting to clearly delineate sections for each candidate and to highlight key skills, experience durations, and seniority assessments.
+
+## Partial Match Candidate(s)
+
+- For candidates who partially meet the requirements, provide a summary of which criteria are met and which are not, along with supporting evidence.
 \`\`\`
 
 Ensure that:
