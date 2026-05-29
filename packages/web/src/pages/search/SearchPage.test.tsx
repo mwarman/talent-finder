@@ -213,7 +213,7 @@ describe('SearchPage', () => {
 
       // Assert - history should now be visible
       expect(screen.getByText('Recent searches')).toBeInTheDocument();
-      expect(screen.getByText('test query')).toBeInTheDocument();
+      expect(screen.getByTestId('search-history-chip-0')).toHaveTextContent('test query');
     });
 
     it('should display multiple history entries in reverse chronological order', async () => {

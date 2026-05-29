@@ -1,10 +1,10 @@
-import { JSX, useRef, useState, useEffect } from 'react';
+import { JSX, useState, useEffect } from 'react';
 
 import { QueryResponse } from '@talent-finder/shared';
 import { ErrorBoundary } from '@/common/components/error-boundary/ErrorBoundary';
 import { useSearchQuery } from './hooks/useSearchQuery';
 import { useSearchHistory, SearchHistoryEntry } from './hooks/useSearchHistory';
-import { SearchInput, SearchInputHandle } from './components/SearchInput';
+import { SearchInput } from './components/SearchInput';
 import { SearchPageHeader } from './components/search-page-header/SearchPageHeader';
 import { SearchResponse } from './components/SearchResponse';
 import { SearchHistory } from './components/SearchHistory';
@@ -17,18 +17,19 @@ import { SearchHistory } from './components/SearchHistory';
  * @returns JSX.Element
  */
 export const SearchPage = (): JSX.Element => {
-  const inputRef = useRef<SearchInputHandle>(null);
   const { mutate, isLoading, data, isError, error } = useSearchQuery();
   const { history, addToHistory } = useSearchHistory();
   const [currentQuery, setCurrentQuery] = useState<string>('');
+  const [displayedQuery, setDisplayedQuery] = useState<string>('');
   const [displayedResponse, setDisplayedResponse] = useState<QueryResponse | undefined>(undefined);
 
   // Add to history when a query succeeds
   useEffect(() => {
     if (data && currentQuery && !isLoading) {
       addToHistory(currentQuery, data);
-      // Clear displayed response when new search is performed
-      setDisplayedResponse(undefined);
+      // Set displayed query and response when search succeeds
+      setDisplayedQuery(currentQuery);
+      setDisplayedResponse(data);
       // Reset currentQuery after adding to history
       setCurrentQuery('');
     }
@@ -40,9 +41,8 @@ export const SearchPage = (): JSX.Element => {
   };
 
   const handleHistoryClick = (entry: SearchHistoryEntry): void => {
-    // Populate the textarea with the previous query
-    inputRef.current?.setQueryFromHistory(entry.query);
-    // Restore the associated response
+    // Display the query and associated response from history
+    setDisplayedQuery(entry.query);
     setDisplayedResponse(entry.result);
   };
 
@@ -54,11 +54,12 @@ export const SearchPage = (): JSX.Element => {
         {/* Query History */}
         <SearchHistory items={history} onHistoryClick={handleHistoryClick} testId="search-page-history" />
 
-        <SearchInput ref={inputRef} onSubmit={handleSearch} isLoading={isLoading} testId="search-page-input" />
+        <SearchInput onSubmit={handleSearch} isLoading={isLoading} testId="search-page-input" />
 
         {/* Display search results */}
         {(data || displayedResponse || isLoading || isError) && (
           <SearchResponse
+            query={displayedQuery}
             data={displayedResponse ?? data}
             isLoading={isLoading}
             isError={isError}

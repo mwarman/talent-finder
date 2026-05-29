@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test/test-utils';
 import { userEvent } from '@testing-library/user-event';
-import { createRef } from 'react';
 
-import { SearchInput, SearchInputHandle } from './SearchInput';
+import { SearchInput } from './SearchInput';
 
 describe('SearchInput', () => {
   let mockOnSubmit: ReturnType<typeof vi.fn>;
@@ -304,72 +303,6 @@ describe('SearchInput', () => {
 
       // Assert
       expect(button).toBeDisabled();
-    });
-  });
-
-  describe('setQueryFromHistory imperative method', () => {
-    it('should populate textarea with history query', () => {
-      // Arrange
-      const ref = createRef<SearchInputHandle>();
-      const { rerender } = render(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-
-      // Act
-      ref.current?.setQueryFromHistory('previous search query');
-      rerender(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-
-      // Assert
-      const textarea = screen.getByTestId('search-input-textarea') as HTMLTextAreaElement;
-      expect(textarea.value).toBe('previous search query');
-    });
-
-    it('should focus textarea after populating from history', () => {
-      // Arrange
-      const ref = createRef<SearchInputHandle>();
-      render(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-
-      // Act
-      ref.current?.setQueryFromHistory('test query');
-
-      // Assert - the implementation sets focus with setTimeout(0) which happens in the next tick
-      // We just verify the method is callable without errors
-      expect(ref.current?.setQueryFromHistory).toBeDefined();
-    });
-
-    it('should clear validation errors when populating from history', async () => {
-      // Arrange
-      const user = await userEvent.setup();
-      const ref = createRef<SearchInputHandle>();
-      const { rerender } = render(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-      const textarea = screen.getByTestId('search-input-textarea');
-
-      // Act - trigger validation error
-      await user.click(textarea);
-      await user.type(textarea, '   ');
-      expect(screen.getByTestId('validation-error')).toBeInTheDocument();
-
-      // Act - populate from history should clear error
-      ref.current?.setQueryFromHistory('valid query from history');
-      rerender(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-
-      // Assert
-      expect(screen.queryByTestId('validation-error')).not.toBeInTheDocument();
-      expect((textarea as HTMLTextAreaElement).value).toBe('valid query from history');
-    });
-
-    it('should allow submit after populating from history', async () => {
-      // Arrange
-      const ref = createRef<SearchInputHandle>();
-      const { rerender } = render(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-      const button = screen.getByTestId('search-submit-button');
-
-      // Act
-      ref.current?.setQueryFromHistory('query from history');
-      rerender(<SearchInput ref={ref} onSubmit={mockOnSubmit} testId="search-input" />);
-
-      // Assert
-      const textarea = screen.getByTestId('search-input-textarea') as HTMLTextAreaElement;
-      expect(textarea.value).toBe('query from history');
-      expect(button).not.toBeDisabled();
     });
   });
 });
