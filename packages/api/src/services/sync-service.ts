@@ -5,7 +5,6 @@ import { bedrockClient } from '../utils/bedrock-client';
 import { logger } from '../utils/logger';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncStatus } from '@talent-finder/shared';
-import { NoPendingDocumentsError } from '../utils/errors/no-pending-documents-error';
 
 /**
  * Bedrock ingestion job status values returned from GetIngestionJob API
@@ -60,11 +59,12 @@ const mapBedrockStatus = (bedrockStatus: BedrockIngestionJobStatus | string): Sy
  */
 export const SyncService = {
   /**
-   * Initiates a Bedrock Knowledge Base ingestion job for all PENDING documents.
+   * Initiates a Bedrock Knowledge Base ingestion job.
    * Finds all documents in PENDING status, starts a single KB ingestion job, then
    * marks all PENDING documents as IN_PROGRESS with the returned job ID.
-   * @returns The Bedrock ingestion job ID and the count of documents queued
-   * @throws NoPendingDocumentsError if no documents are in PENDING status
+   * Note: Sync can be initiated even if there are 0 PENDING documents to account
+   * for other synchronization needs (e.g., deleted documents).
+   * @returns The Bedrock ingestion job ID and the count of PENDING documents queued
    * @throws Error if the Bedrock API call fails or DynamoDB updates fail
    */
   startSync: async (): Promise<SyncStartResult> => {
@@ -72,10 +72,6 @@ export const SyncService = {
 
     try {
       const pendingDocuments = await DocumentRepository.listByStatus(SyncStatus.PENDING);
-
-      if (pendingDocuments.length === 0) {
-        throw new NoPendingDocumentsError();
-      }
 
       logger.debug({ documentCount: pendingDocuments.length }, '[SyncService] - startSync - found PENDING documents');
 

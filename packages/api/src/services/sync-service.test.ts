@@ -34,7 +34,6 @@ import { SyncService } from './sync-service';
 import { bedrockClient } from '../utils/bedrock-client';
 import { DocumentRepository } from '../repositories/document-repository';
 import { SyncStatus } from '@talent-finder/shared';
-import { NoPendingDocumentsError } from '../utils/errors/no-pending-documents-error';
 
 describe('SyncService', () => {
   beforeEach(() => {
@@ -72,13 +71,23 @@ describe('SyncService', () => {
       });
     });
 
-    it('should throw NoPendingDocumentsError when no PENDING documents exist', async () => {
+    it('should succeed with 0 PENDING documents and still initiate Bedrock sync', async () => {
       // Arrange
+      const jobId = 'job-456';
       vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([]);
+      vi.mocked(bedrockClient.send).mockResolvedValueOnce({
+        ingestionJob: { ingestionJobId: jobId },
+      });
+      vi.mocked(DocumentRepository.updateSyncStatus).mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(SyncService.startSync()).rejects.toThrow(NoPendingDocumentsError);
-      expect(bedrockClient.send).not.toHaveBeenCalled();
+      // Act
+      const result = await SyncService.startSync();
+
+      // Assert
+      expect(result.bedrockSyncJobId).toBe(jobId);
+      expect(result.documentCount).toBe(0);
+      expect(bedrockClient.send).toHaveBeenCalled();
+      expect(DocumentRepository.updateSyncStatus).not.toHaveBeenCalled();
     });
 
     it('should throw an error if Bedrock API does not return an ingestionJobId', async () => {

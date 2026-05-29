@@ -7,11 +7,6 @@ vi.mock('../services/sync-service', () => ({
   },
 }));
 
-vi.mock('../utils/errors/no-pending-documents-error', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../utils/errors/no-pending-documents-error')>();
-  return actual;
-});
-
 vi.mock('../utils/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -24,7 +19,6 @@ vi.mock('../utils/logger', () => ({
 
 import { SyncService } from '../services/sync-service';
 import { handle } from './sync-start';
-import { NoPendingDocumentsError } from '../utils/errors/no-pending-documents-error';
 
 const makeEvent = (): APIGatewayProxyEventV2 =>
   ({
@@ -104,23 +98,6 @@ describe('sync-start handler', () => {
 
     // Assert
     expect(SyncService.startSync).toHaveBeenCalledWith();
-  });
-
-  it('should return 409 when no PENDING documents exist', async () => {
-    // Arrange
-    const event = makeEvent();
-    const context = makeContext();
-
-    vi.mocked(SyncService.startSync).mockRejectedValueOnce(new NoPendingDocumentsError());
-
-    // Act
-    const result = await handle(event, context);
-
-    // Assert
-    expect(result.statusCode).toBe(409);
-    const body = JSON.parse(result.body || '{}');
-    expect(body.error).toBe('Conflict');
-    expect(body.message).toContain('PENDING');
   });
 
   it('should return 500 on unexpected error', async () => {
