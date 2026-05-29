@@ -35,8 +35,8 @@ describe('Layout', () => {
 
       // Assert
       expect(screen.getByTestId('layout-header')).toBeInTheDocument();
-      expect(screen.getByTestId('layout-nav-container')).toBeInTheDocument();
-      expect(screen.getByTestId('layout-theme-container')).toBeInTheDocument();
+      expect(screen.getByTestId('layout-header-left')).toBeInTheDocument();
+      expect(screen.getByTestId('layout-header-right')).toBeInTheDocument();
     });
 
     it('should render Outlet for page content', () => {
@@ -73,7 +73,7 @@ describe('Layout', () => {
 
       // Assert
       const headerDiv = screen.getByTestId('layout-header').querySelector('[class*="flex"]');
-      const themeContainer = screen.getByTestId('layout-theme-container');
+      const themeContainer = screen.getByTestId('layout-header-right');
 
       expect(headerDiv).toHaveClass('justify-between');
       expect(themeContainer).toHaveClass('ml-auto');
