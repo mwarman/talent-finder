@@ -1,6 +1,6 @@
 # DevOps Guide
 
-This guide documents the CI/CD workflows for the Talent Finder project. All workflows are defined in `.github/workflows/` and use GitHub Actions for orchestration.
+This guide documents the CI/CD workflows for the Talent Finder project. All workflows are defined in `.github/workflows/` and use GitHub Actions for orchestration. For AWS infrastructure architecture and resource specifications, see [Infrastructure Guide](./INFRASTRUCTURE_GUIDE.md).
 
 ## Workflow Overview
 
@@ -33,10 +33,10 @@ Validates code quality, formatting, linting, and build integrity on every pull r
 3. **Install Dependencies** — Runs `npm ci` (clean install) to ensure reproducible installs
 4. **Format Check** — Validates code formatting with `npm run format:check`
 5. **Lint** — Runs ESLint across the monorepo with `npm run lint`
-6. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets
+6. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets (CDK\_\* and CDK_PINECONE_API_KEY)
 7. **Build** — Compiles all packages with `npm run build`
 8. **Test with Coverage** — Executes unit tests and enforces coverage thresholds via `npm run test:coverage`
-9. **Synthesize CDK** — Validates AWS CDK infrastructure definitions with `npm run cdk:synth`
+9. **Synthesize AWS CDK Infrastructure** — Validates AWS CDK infrastructure definitions with `npm run cdk:synth`
 10. **Clean Up Sensitive Files** — Removes `.env` and `cdk.out` to prevent accidental secret exposure
 
 ### Required Configuration
@@ -72,15 +72,19 @@ Deploys AWS infrastructure and application code to AWS. Uses AWS CDK to synthesi
 1. **Checkout Code** — Retrieves the repository at the current commit
 2. **Setup Node.js** — Installs Node.js from `.nvmrc` with npm cache
 3. **Install Dependencies** — Runs `npm ci` for clean dependency installation
-4. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets
+4. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets (CDK*\*, AWS*\*, and CDK_PINECONE_API_KEY)
 5. **Build** — Compiles all packages with `npm run build`
 6. **Configure AWS Credentials** — Authenticates to AWS using OIDC federation
    - Assumes IAM role specified in `AWS_ROLE_ARN`
    - Targets region in `AWS_REGION`
    - Session name: `deploy-talent-finder-{run-id}`
-7. **Synthesize CDK** — Generates CloudFormation templates with `npm run cdk:synth`
-8. **Deploy Infrastructure** — Deploys synthesized infrastructure with `npm run cdk:deploy`
-9. **Clean Up Sensitive Files** — Removes `.env` to prevent accidental secret exposure
+7. **Synthesize AWS CDK Infrastructure** — Generates CloudFormation templates with `npm run cdk:synth`
+8. **Deploy Backend Stack** — Deploys the Backend Stack with `npm run cdk:deploy BackendStack`
+9. **Retrieve API Gateway URL** — Queries CloudFormation to obtain the Backend Stack's API Gateway endpoint
+10. **Create Web .env File** — Injects the API Gateway URL as `VITE_API_BASE_URL` in `packages/web/.env`
+11. **Build Web Application** — Compiles the React web application with `npm run build` in `packages/web`
+12. **Deploy Frontend Stack** — Deploys the Frontend Stack with `npm run cdk:deploy FrontendStack`
+13. **Clean Up Sensitive Files** — Removes `.env` files and `cdk.out` to prevent accidental secret exposure
 
 ### Required Configuration
 
@@ -95,6 +99,9 @@ Deploys AWS infrastructure and application code to AWS. Uses AWS CDK to synthesi
 - `CDK_LOG_LEVEL` — Logging level for Lambda and services
 - `CDK_LOG_FORMAT` — Log format (json or text)
 - `CDK_LOG_ENABLED` — Enable/disable logging (true or false)
+- `CDK_BEDROCK_MODEL_ID` — Bedrock model ID for query generation
+- `CDK_BEDROCK_MAX_TOKENS` — Maximum tokens in Bedrock model response
+- `CDK_BEDROCK_RETRIEVE_TOP_K` — Number of top chunks to retrieve from Knowledge Base
 - `CDK_PINECONE_INDEX_HOST` — Pinecone vector database index host URL
 
 **GitHub Repository Secrets** (must be configured in repository settings):
@@ -136,16 +143,16 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 1. **Checkout Code** — Retrieves the repository at the current commit
 2. **Setup Node.js** — Installs Node.js from `.nvmrc` with npm cache
 3. **Install Dependencies** — Runs `npm ci` for clean dependency installation
-4. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets
+4. **Create Infrastructure .env File** — Constructs `.env` file in `packages/infra/` using individual repository variables and secrets (CDK*\*, AWS*\*, and CDK_PINECONE_API_KEY)
 5. **Build** — Compiles all packages with `npm run build`
 6. **Configure AWS Credentials** — Authenticates to AWS using OIDC federation
    - Assumes IAM role specified in `AWS_ROLE_ARN`
    - Targets region in `AWS_REGION`
    - Session name: `teardown-talent-finder-{run-id}`
-7. **Synthesize CDK** — Generates CloudFormation templates with `npm run cdk:synth`
-8. **Destroy Infrastructure** — Removes all resources with `npm run cdk:destroy`
+7. **Synthesize AWS CDK Infrastructure** — Generates CloudFormation templates with `npm run cdk:synth`
+8. **Teardown Infrastructure** — Destroys all resources with `npm run cdk:destroy`
    - Prompts for confirmation (requires interactive input or `--force` flag in CDK configuration)
-9. **Clean Up Sensitive Files** — Removes `.env` to prevent accidental secret exposure
+9. **Clean Up Sensitive Files** — Removes `.env` and `cdk.out` to prevent accidental secret exposure
 
 ### Required Configuration
 
@@ -160,6 +167,9 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 - `CDK_LOG_LEVEL` — Logging level for Lambda and services
 - `CDK_LOG_FORMAT` — Log format (json or text)
 - `CDK_LOG_ENABLED` — Enable/disable logging (true or false)
+- `CDK_BEDROCK_MODEL_ID` — Bedrock model ID for query generation
+- `CDK_BEDROCK_MAX_TOKENS` — Maximum tokens in Bedrock model response
+- `CDK_BEDROCK_RETRIEVE_TOP_K` — Number of top chunks to retrieve from Knowledge Base
 - `CDK_PINECONE_INDEX_HOST` — Pinecone vector database index host URL
 
 **GitHub Repository Secrets** (must be configured in repository settings):
@@ -187,18 +197,21 @@ Destroys all AWS infrastructure for the environment. Used when decommissioning t
 
 These are configured in **Settings → Secrets and variables → Variables** and are visible in workflow logs. Use only for non-sensitive infrastructure identifiers and configuration:
 
-| Variable                  | Description                                                  | Example                                             |
-| ------------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
-| `AWS_ROLE_ARN`            | Full ARN of the IAM role to assume for deployment/teardown   | `arn:aws:iam::123456789012:role/github-deploy-role` |
-| `AWS_REGION`              | AWS region for deployment and teardown operations            | `us-east-1`                                         |
-| `CDK_APP_NAME`            | Application name used for resource naming and identification | `talent-finder`                                     |
-| `CDK_ENV_NAME`            | Environment name (e.g., dev, staging, prod)                  | `dev`                                               |
-| `CDK_ORGANIZATION_UNIT`   | Organization unit for resource tagging                       | `engineering`                                       |
-| `CDK_RESOURCE_OWNER`      | Owner identifier for resource tagging                        | `team-name`                                         |
-| `CDK_LOG_LEVEL`           | Logging level for Lambda functions and services              | `info`                                              |
-| `CDK_LOG_FORMAT`          | Log format (e.g., json, text)                                | `json`                                              |
-| `CDK_LOG_ENABLED`         | Enable/disable logging (true/false)                          | `true`                                              |
-| `CDK_PINECONE_INDEX_HOST` | Pinecone vector database index host URL                      | `https://index-xxx.pinecone.io`                     |
+| Variable                     | Description                                                  | Example                                             |
+| ---------------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `AWS_ROLE_ARN`               | Full ARN of the IAM role to assume for deployment/teardown   | `arn:aws:iam::123456789012:role/github-deploy-role` |
+| `AWS_REGION`                 | AWS region for deployment and teardown operations            | `us-east-1`                                         |
+| `CDK_APP_NAME`               | Application name used for resource naming and identification | `talent-finder`                                     |
+| `CDK_ENV_NAME`               | Environment name (e.g., dev, staging, prod)                  | `dev`                                               |
+| `CDK_ORGANIZATION_UNIT`      | Organization unit for resource tagging                       | `engineering`                                       |
+| `CDK_RESOURCE_OWNER`         | Owner identifier for resource tagging                        | `team-name`                                         |
+| `CDK_LOG_LEVEL`              | Logging level for Lambda functions and services              | `info`                                              |
+| `CDK_LOG_FORMAT`             | Log format (e.g., json, text)                                | `json`                                              |
+| `CDK_LOG_ENABLED`            | Enable/disable logging (true/false)                          | `true`                                              |
+| `CDK_BEDROCK_MODEL_ID`       | Bedrock model ID for query generation                        | `us.anthropic.claude-sonnet-4-6`                    |
+| `CDK_BEDROCK_MAX_TOKENS`     | Maximum tokens in Bedrock model response                     | `1500`                                              |
+| `CDK_BEDROCK_RETRIEVE_TOP_K` | Number of top chunks to retrieve from Knowledge Base         | `5`                                                 |
+| `CDK_PINECONE_INDEX_HOST`    | Pinecone vector database index host URL                      | `https://index-xxx.pinecone.io`                     |
 
 ### GitHub Repository Secrets
 
@@ -222,6 +235,9 @@ All three workflows (CI, Deploy, Teardown) follow this process to prepare the `.
    echo "CDK_LOG_LEVEL=${{ vars.CDK_LOG_LEVEL }}" >> .env
    echo "CDK_LOG_FORMAT=${{ vars.CDK_LOG_FORMAT }}" >> .env
    echo "CDK_LOG_ENABLED=${{ vars.CDK_LOG_ENABLED }}" >> .env
+   echo "CDK_BEDROCK_MODEL_ID=${{ vars.CDK_BEDROCK_MODEL_ID }}" >> .env
+   echo "CDK_BEDROCK_MAX_TOKENS=${{ vars.CDK_BEDROCK_MAX_TOKENS }}" >> .env
+   echo "CDK_BEDROCK_RETRIEVE_TOP_K=${{ vars.CDK_BEDROCK_RETRIEVE_TOP_K }}" >> .env
    echo "CDK_PINECONE_INDEX_HOST=${{ vars.CDK_PINECONE_INDEX_HOST }}" >> .env
    echo "CDK_PINECONE_API_KEY=${{ secrets.CDK_PINECONE_API_KEY }}" >> .env
    ```
