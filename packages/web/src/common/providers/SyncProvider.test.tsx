@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { renderHook, act } from '@testing-library/react';
-import { SyncStatus, Document } from '@talent-finder/shared';
 
 import { SyncProvider, useSyncContext } from './SyncProvider';
 
@@ -25,7 +24,6 @@ describe('SyncProvider', () => {
       expect(result.current).toBeDefined();
       expect(result.current.syncNeeded).toBeDefined();
       expect(result.current.setSyncNeeded).toBeDefined();
-      expect(result.current.updateSyncState).toBeDefined();
     });
 
     it('should initialize with default values (syncNeeded: true)', () => {
@@ -85,59 +83,6 @@ describe('SyncProvider', () => {
       expect(result.current.syncNeeded).toBe(false);
     });
 
-    it('should update syncNeeded when documents have pending status', () => {
-      // Arrange
-      const wrapper = ({ children }: { children: React.ReactNode }) => <SyncProvider>{children}</SyncProvider>;
-
-      const { result } = renderHook(() => useSyncContext(), { wrapper });
-
-      const documents: Document[] = [
-        {
-          documentId: '1',
-          filename: 'test.pdf',
-          uploadedAt: '2026-05-27T10:00:00Z',
-          contentType: 'application/pdf',
-          sizeBytes: 1024,
-          syncStatus: SyncStatus.PENDING,
-        },
-      ];
-
-      // Act
-      act(() => {
-        result.current.updateSyncState(documents);
-      });
-
-      // Assert
-      expect(result.current.syncNeeded).toBe(true);
-    });
-
-    it('should update syncNeeded to false when no pending documents', () => {
-      // Arrange
-      const wrapper = ({ children }: { children: React.ReactNode }) => <SyncProvider>{children}</SyncProvider>;
-
-      const { result } = renderHook(() => useSyncContext(), { wrapper });
-
-      const documents: Document[] = [
-        {
-          documentId: '1',
-          filename: 'test.pdf',
-          uploadedAt: '2026-05-27T10:00:00Z',
-          contentType: 'application/pdf',
-          sizeBytes: 1024,
-          syncStatus: SyncStatus.COMPLETED,
-        },
-      ];
-
-      // Act
-      act(() => {
-        result.current.setSyncNeeded(true);
-        result.current.updateSyncState(documents);
-      });
-
-      // Assert
-      expect(result.current.syncNeeded).toBe(false);
-    });
-
     it('should render children', () => {
       // Arrange & Act
       render(
@@ -171,24 +116,6 @@ describe('SyncProvider', () => {
       expect(() => {
         renderHook(() => useSyncContext());
       }).toThrow('useSyncContext must be used within a SyncProvider');
-    });
-
-    it('should handle empty documents array', () => {
-      // Arrange
-      const wrapper = ({ children }: { children: React.ReactNode }) => <SyncProvider>{children}</SyncProvider>;
-
-      const { result } = renderHook(() => useSyncContext(), { wrapper });
-
-      const documents: Document[] = [];
-
-      // Act
-      act(() => {
-        result.current.setSyncNeeded(true);
-        result.current.updateSyncState(documents);
-      });
-
-      // Assert
-      expect(result.current.syncNeeded).toBe(false);
     });
 
     it('should maintain syncNeeded: true when setting via setSyncNeeded', () => {

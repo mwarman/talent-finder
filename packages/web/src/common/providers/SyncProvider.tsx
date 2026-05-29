@@ -1,5 +1,4 @@
 import { JSX, createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Document, SyncStatus } from '@talent-finder/shared';
 
 /**
  * Represents the state of the KB sync context.
@@ -8,27 +7,15 @@ import { Document, SyncStatus } from '@talent-finder/shared';
 interface SyncContextValue {
   syncNeeded: boolean;
   setSyncNeeded: (value: boolean) => void;
-  updateSyncState: (documents: Document[]) => void;
 }
 
 /**
  * Context for tracking KB sync state.
- * Provides methods to check if a sync is needed and to update sync state based on document changes.
+ * Provides methods to check and manage if a sync is needed.
  */
 const SyncContext = createContext<SyncContextValue | undefined>(undefined);
 
 const SYNC_CONTEXT_STORAGE_KEY = 'talent-finder-sync-context';
-
-/**
- * Determines if sync is needed based on the current documents.
- * Sync is needed if any document is in PENDING status.
- *
- * @param documents - The list of current documents
- * @returns true if sync is needed, false otherwise
- */
-const isSyncNeeded = (documents: Document[]): boolean => {
-  return documents.some((doc) => doc.syncStatus === SyncStatus.PENDING);
-};
 
 /**
  * Loads sync context from localStorage.
@@ -70,7 +57,6 @@ interface SyncProviderProps {
 
 /**
  * SyncProvider component manages the global KB sync state.
- * Provides context for determining if a sync operation is needed based on document status.
  * Persists sync state to localStorage across sessions.
  *
  * @param children - Child components to provide context to
@@ -90,18 +76,9 @@ export const SyncProvider = ({ children }: SyncProviderProps): JSX.Element => {
     setSyncNeededState(value);
   }, []);
 
-  const updateSyncState = useCallback(
-    (documents: Document[]): void => {
-      const needed = isSyncNeeded(documents);
-      setSyncNeeded(needed);
-    },
-    [setSyncNeeded],
-  );
-
   const value: SyncContextValue = {
     syncNeeded,
     setSyncNeeded,
-    updateSyncState,
   };
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

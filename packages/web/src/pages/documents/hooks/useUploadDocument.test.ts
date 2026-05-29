@@ -72,7 +72,6 @@ describe('useUploadDocument', () => {
     (useSyncContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       setSyncNeeded: mockSetSyncNeeded,
       syncNeeded: false,
-      updateSyncState: vi.fn(),
     });
 
     // Mock successful presigned URL response

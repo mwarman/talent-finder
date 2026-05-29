@@ -28,7 +28,6 @@ describe('DocumentsPageHeader', () => {
     vi.mocked(SyncProviderModule.useSyncContext).mockReturnValue({
       syncNeeded,
       setSyncNeeded: vi.fn(),
-      updateSyncState: vi.fn(),
     } as never);
   };
 

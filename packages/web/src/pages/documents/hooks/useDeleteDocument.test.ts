@@ -77,7 +77,6 @@ describe('useDeleteDocument', () => {
     (useSyncContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       setSyncNeeded: mockSetSyncNeeded,
       syncNeeded: false,
-      updateSyncState: vi.fn(),
     });
   });
 

@@ -27,7 +27,6 @@ describe('DocumentsPage', () => {
     vi.mocked(SyncProviderModule.useSyncContext).mockReturnValue({
       syncNeeded: false,
       setSyncNeeded: vi.fn(),
-      updateSyncState: vi.fn(),
     } as never);
   });
 

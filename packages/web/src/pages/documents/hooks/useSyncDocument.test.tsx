@@ -38,7 +38,6 @@ describe('useSyncDocument', () => {
     vi.mocked(SyncProviderModule.useSyncContext).mockReturnValue({
       syncNeeded: true,
       setSyncNeeded: mockSetSyncNeeded,
-      updateSyncState: vi.fn(),
     } as never);
   });
 
