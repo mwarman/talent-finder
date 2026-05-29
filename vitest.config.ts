@@ -9,12 +9,12 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
-    exclude: ['node_modules', 'dist'],
+    exclude: ['node_modules', 'dist', '**/__fixtures__/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['node_modules', 'dist'],
+      exclude: ['node_modules', 'dist', '**/__fixtures__/**'],
     },
   },
 });
