@@ -246,33 +246,6 @@ describe('DocumentsTable', () => {
     expect(screen.getByTestId('sync-badge-2')).toBeInTheDocument();
   });
 
-  it('should render sync buttons for each document', () => {
-    // Arrange
-    const mockDocuments: Document[] = [
-      {
-        documentId: '1',
-        filename: 'test.pdf',
-        uploadedAt: '2026-05-27T10:00:00Z',
-        contentType: 'application/pdf',
-        sizeBytes: 1024,
-        syncStatus: SyncStatus.COMPLETED,
-      },
-    ];
-
-    vi.spyOn(useGetDocumentsModule, 'useGetDocuments').mockReturnValue({
-      documents: mockDocuments,
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    // Act
-    renderWithRouter(<DocumentsTable />);
-
-    // Assert
-    expect(screen.getByTestId('sync-btn-1')).toBeInTheDocument();
-  });
-
   it('should render delete buttons for each document', () => {
     // Arrange
     const mockDocuments: Document[] = [

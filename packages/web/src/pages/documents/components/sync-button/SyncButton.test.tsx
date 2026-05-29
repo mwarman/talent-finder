@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SyncStatus } from '@talent-finder/shared';
 
 import { SyncButton } from './SyncButton';
 import * as useSyncDocumentModule from '../../hooks/useSyncDocument';
@@ -41,82 +40,120 @@ describe('SyncButton', () => {
     } as never);
   };
 
-  it('should be enabled for PENDING status', () => {
-    const mockMutate = vi.fn();
-    setupMock(false, mockMutate);
+  // Happy path tests
+  describe('happy path', () => {
+    it('should render the button', () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
 
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.PENDING} testId="sync-btn" />);
+      renderWithProviders(<SyncButton isEnabled={true} testId="sync-btn" />);
 
-    const button = screen.getByTestId('sync-btn');
-    expect(button).not.toBeDisabled();
-    expect(button).toHaveTextContent('Sync');
+      expect(screen.getByTestId('sync-btn')).toBeInTheDocument();
+    });
+
+    it('should be enabled when isEnabled is true', () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
+
+      renderWithProviders(<SyncButton isEnabled={true} testId="sync-btn" />);
+
+      const button = screen.getByTestId('sync-btn');
+      expect(button).not.toBeDisabled();
+      expect(button).toHaveTextContent('Sync');
+    });
+
+    it('should be disabled when isEnabled is false', () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
+
+      renderWithProviders(<SyncButton isEnabled={false} testId="sync-btn" />);
+
+      const button = screen.getByTestId('sync-btn');
+      expect(button).toBeDisabled();
+    });
+
+    it('should call mutate when clicked', async () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
+      const user = await userEvent.setup();
+
+      renderWithProviders(<SyncButton isEnabled={true} testId="sync-btn" />);
+
+      const button = screen.getByTestId('sync-btn');
+      await user.click(button);
+
+      expect(mockMutate).toHaveBeenCalledWith();
+    });
+
+    it('should show loading state and disabled button during sync', () => {
+      const mockMutate = vi.fn();
+      setupMock(true, mockMutate);
+
+      renderWithProviders(<SyncButton isEnabled={true} testId="sync-btn" />);
+
+      const button = screen.getByTestId('sync-btn');
+      expect(button).toBeDisabled();
+      expect(button).toHaveTextContent('Syncing...');
+    });
+
+    it('should use default testId when not provided', () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
+
+      renderWithProviders(<SyncButton isEnabled={true} />);
+
+      expect(screen.getByTestId('sync-button')).toBeInTheDocument();
+    });
+
+    it('should not call mutate when disabled', async () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
+      const user = await userEvent.setup();
+
+      renderWithProviders(<SyncButton isEnabled={false} testId="sync-btn" />);
+
+      const button = screen.getByTestId('sync-btn');
+      await user.click(button);
+
+      expect(mockMutate).not.toHaveBeenCalled();
+    });
+
+    it('should display loading spinner when isPending is true', () => {
+      const mockMutate = vi.fn();
+      setupMock(true, mockMutate);
+
+      renderWithProviders(<SyncButton isEnabled={true} testId="sync-btn" />);
+
+      const spinner = screen.getByTestId('sync-btn').querySelector('svg');
+      expect(spinner).toBeInTheDocument();
+    });
   });
 
-  it('should be enabled for FAILED status', () => {
-    const mockMutate = vi.fn();
-    setupMock(false, mockMutate);
+  // Edge case tests
+  describe('edge cases', () => {
+    it('should prevent double-submit when already syncing', async () => {
+      const mockMutate = vi.fn();
+      setupMock(true, mockMutate);
+      const user = await userEvent.setup();
 
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.FAILED} testId="sync-btn" />);
+      renderWithProviders(<SyncButton isEnabled={true} testId="sync-btn" />);
 
-    const button = screen.getByTestId('sync-btn');
-    expect(button).not.toBeDisabled();
-    expect(button).toHaveTextContent('Sync');
-  });
+      const button = screen.getByTestId('sync-btn');
+      expect(button).toBeDisabled();
+      await user.click(button);
 
-  it('should be disabled for IN_PROGRESS status', () => {
-    const mockMutate = vi.fn();
-    setupMock(false, mockMutate);
+      expect(mockMutate).not.toHaveBeenCalled();
+    });
 
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.IN_PROGRESS} testId="sync-btn" />);
+    it('should remain disabled if isEnabled is false even if not pending', () => {
+      const mockMutate = vi.fn();
+      setupMock(false, mockMutate);
 
-    const button = screen.getByTestId('sync-btn');
-    expect(button).toBeDisabled();
-  });
+      renderWithProviders(<SyncButton isEnabled={false} testId="sync-btn" />);
 
-  it('should be disabled for COMPLETED status', () => {
-    const mockMutate = vi.fn();
-    setupMock(false, mockMutate);
-
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.COMPLETED} testId="sync-btn" />);
-
-    const button = screen.getByTestId('sync-btn');
-    expect(button).toBeDisabled();
-  });
-
-  it('should call mutate with no arguments when clicked', async () => {
-    const mockMutate = vi.fn();
-    setupMock(false, mockMutate);
-    const user = await userEvent.setup();
-
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.PENDING} testId="sync-btn" />);
-
-    const button = screen.getByTestId('sync-btn');
-    await user.click(button);
-
-    expect(mockMutate).toHaveBeenCalledWith();
-  });
-
-  it('should show loading state and disabled button during sync', () => {
-    const mockMutate = vi.fn();
-    setupMock(true, mockMutate);
-
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.PENDING} testId="sync-btn" />);
-
-    const button = screen.getByTestId('sync-btn');
-    expect(button).toBeDisabled();
-    expect(button).toHaveTextContent('Syncing...');
-  });
-
-  it('should not call mutate when disabled for non-syncable status', async () => {
-    const mockMutate = vi.fn();
-    setupMock(false, mockMutate);
-    const user = await userEvent.setup();
-
-    renderWithProviders(<SyncButton documentId="doc-123" status={SyncStatus.IN_PROGRESS} testId="sync-btn" />);
-
-    const button = screen.getByTestId('sync-btn');
-    await user.click(button);
-
-    expect(mockMutate).not.toHaveBeenCalled();
+      const button = screen.getByTestId('sync-btn');
+      expect(button).toBeDisabled();
+      expect(button).toHaveTextContent('Sync');
+    });
   });
 });

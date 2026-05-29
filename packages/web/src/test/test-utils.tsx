@@ -1,5 +1,6 @@
 // src/test/test-utils.tsx
 import { ThemeProvider } from '@/common/providers/ThemeProvider';
+import { SyncProvider } from '@/common/providers/SyncProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -27,7 +28,9 @@ const renderWithRouter = (ui: React.ReactElement, options?: Omit<RenderOptions, 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <SyncProvider>{children}</SyncProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );
