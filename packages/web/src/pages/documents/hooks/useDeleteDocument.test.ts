@@ -48,36 +48,21 @@ vi.mock('@/common/utils/api-client', () => ({
   },
 }));
 
-vi.mock('@/common/providers/SyncProvider', async () => {
-  const actual = await vi.importActual<typeof import('@/common/providers/SyncProvider')>(
-    '@/common/providers/SyncProvider',
-  );
-  return {
-    ...actual,
-    useSyncContext: vi.fn(),
-  };
-});
-
 import { useDeleteDocument } from './useDeleteDocument';
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/api-error';
-import { useSyncContext } from '@/common/providers/SyncProvider';
 import { renderHook, act } from '@testing-library/react';
+import { SYNC_STATE_QUERY_KEY } from './useGetSyncState';
 
 describe('useDeleteDocument', () => {
   const mockQueryClient = {
     invalidateQueries: vi.fn(),
+    setQueryData: vi.fn(),
   };
-
-  const mockSetSyncNeeded = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     (useQueryClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockQueryClient);
-    (useSyncContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      setSyncNeeded: mockSetSyncNeeded,
-      syncNeeded: false,
-    });
   });
 
   it('should delete document successfully', async () => {
@@ -93,7 +78,7 @@ describe('useDeleteDocument', () => {
 
     // Assert
     expect(apiClient.delete).toHaveBeenCalledWith(`/documents/${documentId}`);
-    expect(mockSetSyncNeeded).toHaveBeenCalledWith(true);
+    expect(mockQueryClient.setQueryData).toHaveBeenCalledWith(SYNC_STATE_QUERY_KEY, { syncNeeded: true });
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['documents'] });
     expect(toast.error).not.toHaveBeenCalled();
   });
@@ -118,6 +103,7 @@ describe('useDeleteDocument', () => {
     // Assert
     expect(apiClient.delete).toHaveBeenCalledWith(`/documents/${documentId}`);
     expect(toast.error).toHaveBeenCalledWith(`Delete failed: ${errorMessage}`);
+    expect(mockQueryClient.setQueryData).not.toHaveBeenCalled();
     expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled();
   });
 
