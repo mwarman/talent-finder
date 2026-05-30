@@ -32,12 +32,15 @@ graph TD
     subgraph API["API Layer"]
         APIGW[API Gateway<br/>HTTP API]
         FN_Upload[Upload Lambda<br/>Pre-sign S3 URL]
-        FN_Sync[Sync Lambda<br/>Trigger + poll KB job]
+        FN_Sync[Sync Lambda<br/>Trigger KB job]
+        FN_SyncStateGet[Sync State Get Lambda<br/>Get sync state]
+        FN_SyncStateSet[Sync State Set Lambda<br/>Update sync state]
         FN_Query[Query Lambda<br/>Retrieve + Generate]
     end
 
     subgraph Storage["Document Store"]
         S3[Amazon S3<br/>Resume Corpus<br/>PDF + TXT]
+        DDB[(DynamoDB<br/>Document Metadata<br/>+ Sync State)]
     end
 
     subgraph RAG["Bedrock Knowledge Base"]
@@ -56,11 +59,17 @@ graph TD
     UI_Upload -->|Upload request| APIGW --> FN_Upload
     FN_Upload -->|Pre-signed URL| UI_Upload
     UI_Upload -->|Direct upload| S3
+    FN_Upload -->|Store metadata| DDB
+    UI_Upload -->|Check sync state| APIGW --> FN_SyncStateGet
+    FN_SyncStateGet -->|Query state| DDB
     UI_Upload -->|Trigger sync| APIGW --> FN_Sync
-    FN_Sync -->|Start/poll sync job| KB
+    FN_Sync -->|Start KB job| KB
+    FN_Sync -->|Update metadata| DDB
     KB -->|Read documents| S3
     KB -->|Retrieve API key| SM
     KB -->|Chunk + embed + index| Pinecone
+    FN_Sync -->|Mark sync complete| APIGW --> FN_SyncStateSet
+    FN_SyncStateSet -->|Update state| DDB
 
     UI_Chat -->|Natural language query| APIGW --> FN_Query
     FN_Query -->|Retrieve top-K chunks| KB
