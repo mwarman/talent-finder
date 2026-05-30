@@ -31,7 +31,16 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
     // Poll status from Bedrock and fan out updates to all documents in the job
     const { syncStatus, updatedAt, syncError } = await SyncService.pollStatus(bedrockSyncJobId);
 
-    logger.info({ bedrockSyncJobId, syncStatus }, '[SyncStatusHandler] < handle - status retrieved');
+    // When the sync job finishes, clear the syncNeeded flag so subsequent GET /sync-state
+    // requests reflect the current state. Fire-and-forget: log errors but do not re-throw.
+    if (syncStatus === SyncStatus.COMPLETED) {
+      try {
+        await DocumentRepository.setSyncNeeded(false);
+        logger.debug({ bedrockSyncJobId }, '[SyncStatusHandler] - handle - sync needed flag cleared');
+      } catch (syncStateError) {
+        logger.error({ error: syncStateError }, '[SyncStatusHandler] - handle - failed to clear sync needed flag');
+      }
+    }
 
     const responseBody: Record<string, unknown> = {
       syncStatus,
@@ -42,6 +51,7 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
       responseBody.syncError = syncError;
     }
 
+    logger.info({ bedrockSyncJobId, syncStatus }, '[SyncStatusHandler] < handle - status retrieved');
     return response.ok(responseBody);
   } catch (error) {
     logger.error({ error }, '[SyncStatusHandler] < handle - unexpected error');
