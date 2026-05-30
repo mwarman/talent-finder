@@ -66,8 +66,21 @@ export const DocumentService = {
 
       // Delete the DynamoDB record
       await DocumentRepository.deleteById(documentId);
-      logger.debug({ documentId }, '[DocumentService] < deleteDocument - document deleted successfully');
 
+      // Mark the KB as needing a sync since a document was removed.
+      // Fire-and-forget: log errors but do not re-throw — the document is already deleted
+      // and the user can still manually trigger a sync.
+      try {
+        await DocumentRepository.setSyncNeeded(true);
+        logger.debug({ documentId }, '[DocumentService] - deleteDocument - sync needed flag set to true');
+      } catch (syncError) {
+        logger.error(
+          { error: syncError, documentId },
+          '[DocumentService] - deleteDocument - failed to set sync needed flag',
+        );
+      }
+
+      logger.debug({ documentId }, '[DocumentService] < deleteDocument - document deleted successfully');
       return document;
     } catch (error) {
       logger.error({ error, documentId }, '[DocumentService] < deleteDocument - failed to delete document');

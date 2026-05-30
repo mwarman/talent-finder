@@ -15,6 +15,7 @@ vi.mock('../repositories/document-repository', () => ({
   DocumentRepository: {
     getById: vi.fn(),
     deleteById: vi.fn(),
+    setSyncNeeded: vi.fn(),
   },
 }));
 
@@ -80,6 +81,8 @@ describe('document-service', () => {
 
       expect(DocumentRepository.deleteById).toHaveBeenCalledOnce();
       expect(DocumentRepository.deleteById).toHaveBeenCalledWith(documentId);
+      expect(DocumentRepository.setSyncNeeded).toHaveBeenCalledOnce();
+      expect(DocumentRepository.setSyncNeeded).toHaveBeenCalledWith(true);
     });
 
     it('should return null if document does not exist', async () => {
@@ -97,6 +100,7 @@ describe('document-service', () => {
       expect(DeleteObjectsCommand).not.toHaveBeenCalled();
       expect(s3Client.send).not.toHaveBeenCalled();
       expect(DocumentRepository.deleteById).not.toHaveBeenCalled();
+      expect(DocumentRepository.setSyncNeeded).not.toHaveBeenCalled();
     });
 
     it('should propagate S3 deletion errors without deleting DynamoDB record', async () => {
@@ -276,6 +280,66 @@ describe('document-service', () => {
       const getByIdCall = vi.mocked(DocumentRepository.getById).mock.invocationCallOrder[0];
       const listCommandCall = vi.mocked(ListObjectsV2Command).mock.invocationCallOrder[0];
       expect(getByIdCall).toBeLessThan(listCommandCall);
+    });
+
+    it('should call setSyncNeeded(true) after a successful delete', async () => {
+      // Arrange
+      const documentId = 'doc-123';
+      const mockDocument = {
+        documentId,
+        filename: 'resume.pdf',
+        uploadedAt: '2026-05-23T10:00:00Z',
+        contentType: 'application/pdf' as const,
+        sizeBytes: 102400,
+        syncStatus: 'COMPLETED' as const,
+      };
+
+      vi.mocked(DocumentRepository.getById).mockResolvedValueOnce(mockDocument);
+      vi.mocked(s3Client.send)
+        .mockResolvedValueOnce({ Contents: [{ Key: 'documents/doc-123/resume.pdf' }] })
+        .mockResolvedValueOnce({});
+      vi.mocked(DocumentRepository.setSyncNeeded).mockResolvedValueOnce(undefined);
+
+      // Act
+      await DocumentService.deleteDocument(documentId);
+
+      // Assert
+      expect(DocumentRepository.setSyncNeeded).toHaveBeenCalledOnce();
+      expect(DocumentRepository.setSyncNeeded).toHaveBeenCalledWith(true);
+    });
+
+    it('should NOT call setSyncNeeded when the document is not found', async () => {
+      // Arrange
+      vi.mocked(DocumentRepository.getById).mockResolvedValueOnce(undefined);
+
+      // Act
+      await DocumentService.deleteDocument('doc-not-found');
+
+      // Assert
+      expect(DocumentRepository.setSyncNeeded).not.toHaveBeenCalled();
+    });
+
+    it('should not throw when setSyncNeeded fails after a successful delete', async () => {
+      // Arrange
+      const documentId = 'doc-123';
+      const mockDocument = {
+        documentId,
+        filename: 'resume.pdf',
+        uploadedAt: '2026-05-23T10:00:00Z',
+        contentType: 'application/pdf' as const,
+        sizeBytes: 102400,
+        syncStatus: 'COMPLETED' as const,
+      };
+
+      vi.mocked(DocumentRepository.getById).mockResolvedValueOnce(mockDocument);
+      vi.mocked(s3Client.send)
+        .mockResolvedValueOnce({ Contents: [{ Key: 'documents/doc-123/resume.pdf' }] })
+        .mockResolvedValueOnce({});
+      vi.mocked(DocumentRepository.setSyncNeeded).mockRejectedValueOnce(new Error('DynamoDB error'));
+
+      // Act & Assert — must not throw even though setSyncNeeded rejected
+      const result = await DocumentService.deleteDocument(documentId);
+      expect(result).toEqual(mockDocument);
     });
   });
 });
