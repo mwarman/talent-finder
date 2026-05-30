@@ -14,6 +14,7 @@ Create an implementation plan for GitHub Issue #${input:issueNumber:Issue number
 3. Identify all changes required: source, tests, docs.
 4. Present a numbered implementation plan.
 5. Flag any ambiguity or architectural decision the ticket doesn't resolve — ask before assuming.
+6. Present a draft of the plan in the chat for review before posting it as a comment on the issue.
 
 ---
 
