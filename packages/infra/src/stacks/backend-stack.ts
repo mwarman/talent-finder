@@ -86,15 +86,38 @@ export class BackendStack extends Stack {
       ],
     });
 
-    // DynamoDB Table for document metadata
+    // DynamoDB Table for document metadata — single-table design with composite keys
+    // pk: KB#<knowledgeBaseId>  (partition key)
+    // sk: DOCUMENT#<documentId> | SYNC_STATE  (sort key — distinguishes document items from sync-state item)
     const documentsTable = new Table(this, 'DocumentsTable', {
       tableName: `${props.appName}-documents-${props.envName}`,
       partitionKey: {
-        name: 'documentId',
+        name: 'pk',
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'sk',
         type: AttributeType.STRING,
       },
       billingMode: BillingMode.PAY_PER_REQUEST,
       removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+    });
+
+    // GSI for querying documents by sync status within a knowledge base
+    // PK=pk (KB#<kbId>), SK=syncStatus — supports DocumentRepository.listByStatus() queries.
+    // Note: GSI queries are eventually consistent.
+    documentsTable.addGlobalSecondaryIndex({
+      indexName: 'syncStatus-index',
+      partitionKey: { name: 'pk', type: AttributeType.STRING },
+      sortKey: { name: 'syncStatus', type: AttributeType.STRING },
+    });
+
+    // Sparse GSI for looking up documents by their Bedrock ingestion job ID.
+    // Only document items where bedrockSyncJobId is set are included — reduces write costs.
+    // PK=bedrockSyncJobId (no sort key) — supports DocumentRepository.listByJobId() queries.
+    documentsTable.addGlobalSecondaryIndex({
+      indexName: 'bedrockSyncJobId-index',
+      partitionKey: { name: 'bedrockSyncJobId', type: AttributeType.STRING },
     });
 
     // Secrets Manager secret for Pinecone API key
@@ -471,6 +494,76 @@ export class BackendStack extends Stack {
       path: '/sync-status',
       methods: [HttpMethod.GET],
       integration: syncStatusIntegration,
+    });
+
+    // Sync State Get Lambda Function — retrieves the syncNeeded flag for the Knowledge Base
+    const syncStateGetLambda = new NodejsFunction(this, 'SyncStateGetFunction', {
+      functionName: `${props.appName}-sync-state-get-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/sync-state-get.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'SyncStateGetFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-sync-state-get-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant sync state get Lambda read-only permissions to DynamoDB
+    documentsTable.grantReadData(syncStateGetLambda);
+
+    // Wire sync state get Lambda to GET /sync-state route
+    const syncStateGetIntegration = new HttpLambdaIntegration('SyncStateGetIntegration', syncStateGetLambda);
+    httpApi.addRoutes({
+      path: '/sync-state',
+      methods: [HttpMethod.GET],
+      integration: syncStateGetIntegration,
+    });
+
+    // Sync State Set Lambda Function — updates the syncNeeded flag for the Knowledge Base
+    const syncStateSetLambda = new NodejsFunction(this, 'SyncStateSetFunction', {
+      functionName: `${props.appName}-sync-state-set-${props.envName}`,
+      entry: path.join(__dirname, '../../../api/src/handlers/sync-state-set.ts'),
+      handler: 'handle',
+      runtime: Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      loggingFormat: LoggingFormat.JSON,
+      applicationLogLevelV2: ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: SystemLogLevel.INFO,
+      logGroup: new LogGroup(this, 'SyncStateSetFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${props.appName}-sync-state-set-${props.envName}`,
+        retention: props.envName === 'prod' ? RetentionDays.ONE_MONTH : RetentionDays.ONE_WEEK,
+        removalPolicy: props.envName === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      }),
+      environment: baseLambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant sync state set Lambda read and write permissions to DynamoDB
+    documentsTable.grantReadWriteData(syncStateSetLambda);
+
+    // Wire sync state set Lambda to PUT /sync-state route
+    const syncStateSetIntegration = new HttpLambdaIntegration('SyncStateSetIntegration', syncStateSetLambda);
+    httpApi.addRoutes({
+      path: '/sync-state',
+      methods: [HttpMethod.PUT],
+      integration: syncStateSetIntegration,
     });
 
     // Query Lambda Function — retrieves candidates from Knowledge Base and generates an answer via Claude
