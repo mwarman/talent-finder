@@ -12,15 +12,15 @@ Create an implementation plan for GitHub Issue #${input:issueNumber:Issue number
 1. Fetch the issue body, comments, and any linked PRs via the GitHub MCP server.
 2. Read the affected source files to understand existing conventions (naming, structure, error handling, test style).
 3. Identify all changes required: source, tests, docs.
-4. Present a numbered implementation plan.
+4. Create a phased implementation plan with clear milestones and deliverables for each phase. Each phase logically builds on the previous one, starting with the most critical or foundational changes.
 5. Flag any ambiguity or architectural decision the ticket doesn't resolve — ask before assuming.
-6. Present a draft of the plan in the chat for review before posting it as a comment on the issue.
+6. Present an outline of the plan in the chat for review before creating the full document in the workspace.
 
 ---
 
 **Step 2 — Create Plan Artifact**
 
-Create a new comment on the issue with the implementation plan. Use markdown formatting and include checkboxes for each step.
+Create a plan artifact in the workspace with the implementation plan. The file is named `IMPLEMENTATION_PLAN_ISSUE_${input:issueNumber}.md` and located in the workspace root. Use markdown formatting and include checkboxes for each step.
 
 Plan format:
 
