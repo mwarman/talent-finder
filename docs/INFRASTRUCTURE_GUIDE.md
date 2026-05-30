@@ -19,6 +19,8 @@ graph TB
     LambdaList["Lambda<br/>(List Documents)"]
     LambdaDelete["Lambda<br/>(Delete Document)"]
     LambdaSync["Lambda<br/>(Sync to KB)"]
+    LambdaSyncStateGet["Lambda<br/>(Sync State Get)"]
+    LambdaSyncStateSet["Lambda<br/>(Sync State Set)"]
     S3Docs["S3 Bucket<br/>(Document Corpus)"]
     DynamoDB["DynamoDB<br/>(Document Metadata)"]
     Bedrock["Bedrock<br/>(Query Generation)"]
@@ -35,11 +37,15 @@ graph TB
     APIGateway -->|Route| LambdaList
     APIGateway -->|Route| LambdaDelete
     APIGateway -->|Route| LambdaSync
+    APIGateway -->|Route| LambdaSyncStateGet
+    APIGateway -->|Route| LambdaSyncStateSet
     LambdaUpload -->|PutObject| S3Docs
     LambdaList -->|Query| DynamoDB
     LambdaDelete -->|DeleteObject| S3Docs
     LambdaDelete -->|DeleteItem| DynamoDB
     LambdaSync -->|StartIngestionJob| Bedrock
+    LambdaSyncStateGet -->|Query| DynamoDB
+    LambdaSyncStateSet -->|UpdateItem| DynamoDB
     Bedrock -->|Read Docs| S3Docs
     Bedrock -->|Embed| TitanEmbeddings
     Bedrock -->|Store Vectors| Pinecone
@@ -49,6 +55,8 @@ graph TB
     LambdaList -->|Emit Logs| CloudWatch
     LambdaDelete -->|Emit Logs| CloudWatch
     LambdaSync -->|Emit Logs| CloudWatch
+    LambdaSyncStateGet -->|Emit Logs| CloudWatch
+    LambdaSyncStateSet -->|Emit Logs| CloudWatch
 ```
 
 ### Service Rationale
@@ -66,13 +74,15 @@ graph TB
 
 - Serverless API endpoint for Lambda function routing. Chosen over REST API for lower cost, lower latency, and simpler configuration. Supports CORS natively for CloudFront origin.
 
-**Lambda Functions (5 instances)**
+**Lambda Functions (7 instances)**
 
 - **Health Check:** Lightweight liveness probe for monitoring and load balancer health checks.
 - **Upload URL Generator:** Issues pre-signed S3 PUT URLs to clients, allowing direct browser uploads without API Gateway bandwidth overhead.
 - **List Documents:** Queries DynamoDB for document metadata and returns to client.
 - **Delete Document:** Removes documents from S3 and DynamoDB, cleaning up corpus and metadata.
 - **Sync Initiator:** Triggers Bedrock Knowledge Base ingestion jobs to embed documents into the vector store.
+- **Sync State Get:** Retrieves the current sync state from DynamoDB, indicating whether a sync is needed.
+- **Sync State Set:** Updates the sync state in DynamoDB, allowing clients to mark sync operations as complete.
 
 Lambdas are chosen for their event-driven, pay-per-execution model, automatic scaling, and zero-management operation. Node.js runtime minimizes cold-start latency.
 
@@ -398,6 +408,24 @@ The Bedrock Knowledge Base uses Pinecone Serverless as its vector store. The ind
 - **Memory:** 512 MB
 - **Timeout:** 30 seconds
 - **Permissions:** `dynamodb:ReadWriteData` (Documents table), `bedrock:StartIngestionJob` (Knowledge Base data source)
+
+#### Sync State Get Lambda
+
+- **Route:** `GET /sync-state`
+- **Purpose:** Retrieves the current sync state for the Knowledge Base. Returns `{ syncNeeded: true }` by default when no state exists, indicating that a sync may be required.
+- **Memory:** 256 MB
+- **Timeout:** 6 seconds
+- **Permissions:** `dynamodb:GetItem` (Documents table)
+
+#### Sync State Set Lambda
+
+- **Route:** `PUT /sync-state`
+- **Purpose:** Updates the sync state in DynamoDB. Clients use this to mark sync operations as complete by sending `{ syncNeeded: false }`.
+- **Memory:** 256 MB
+- **Timeout:** 6 seconds
+- **Permissions:** `dynamodb:PutItem` (Documents table)
+- **Request Body:** `{ syncNeeded: boolean }`
+- **Response:** `{ syncNeeded: boolean }`
 
 ### HTTP API Gateway
 
