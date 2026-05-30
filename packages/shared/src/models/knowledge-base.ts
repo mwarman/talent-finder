@@ -12,3 +12,9 @@ export const SetSyncStateSchema = z.object({
 });
 
 export type SetSyncStateRequest = z.infer<typeof SetSyncStateSchema>;
+
+export const SyncStateSchema = z.object({
+  syncNeeded: z.boolean(),
+});
+
+export type SyncState = z.infer<typeof SyncStateSchema>;

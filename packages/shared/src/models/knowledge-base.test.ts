@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { KnowledgeBase, KnowledgeBaseSchema, SetSyncStateRequest, SetSyncStateSchema } from './knowledge-base';
+import {
+  KnowledgeBase,
+  KnowledgeBaseSchema,
+  SetSyncStateRequest,
+  SetSyncStateSchema,
+  SyncState,
+  SyncStateSchema,
+} from './knowledge-base';
 
 describe('KnowledgeBase', () => {
   describe('KnowledgeBaseSchema', () => {
@@ -137,6 +144,59 @@ describe('KnowledgeBase', () => {
     it('should reject null input', () => {
       // Act & Assert
       expect(() => SetSyncStateSchema.parse(null)).toThrow();
+    });
+  });
+
+  describe('SyncStateSchema', () => {
+    it('should parse valid SyncState with syncNeeded true', () => {
+      // Arrange
+      const validSyncState: SyncState = { syncNeeded: true };
+
+      // Act
+      const result = SyncStateSchema.parse(validSyncState);
+
+      // Assert
+      expect(result).toEqual(validSyncState);
+    });
+
+    it('should parse valid SyncState with syncNeeded false', () => {
+      // Arrange
+      const validSyncState: SyncState = { syncNeeded: false };
+
+      // Act
+      const result = SyncStateSchema.parse(validSyncState);
+
+      // Assert
+      expect(result).toEqual(validSyncState);
+    });
+
+    it('should reject missing syncNeeded', () => {
+      // Arrange
+      const invalidSyncState = {};
+
+      // Act & Assert
+      expect(() => SyncStateSchema.parse(invalidSyncState)).toThrow();
+    });
+
+    it('should reject non-boolean syncNeeded', () => {
+      // Arrange
+      const invalidSyncState = { syncNeeded: 1 };
+
+      // Act & Assert
+      expect(() => SyncStateSchema.parse(invalidSyncState)).toThrow();
+    });
+
+    it('should reject string syncNeeded', () => {
+      // Arrange
+      const invalidSyncState = { syncNeeded: 'true' };
+
+      // Act & Assert
+      expect(() => SyncStateSchema.parse(invalidSyncState)).toThrow();
+    });
+
+    it('should reject null input', () => {
+      // Act & Assert
+      expect(() => SyncStateSchema.parse(null)).toThrow();
     });
   });
 });
