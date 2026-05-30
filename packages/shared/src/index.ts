@@ -11,6 +11,8 @@ export { QueryRequestSchema, QueryResponseSchema, type QueryRequest, type QueryR
 export {
   KnowledgeBaseSchema,
   SetSyncStateSchema,
+  SyncStateSchema,
   type KnowledgeBase,
   type SetSyncStateRequest,
+  type SyncState,
 } from './models/knowledge-base';

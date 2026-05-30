@@ -4,29 +4,30 @@ import { renderWithRouter, screen } from '@/test/test-utils';
 
 import { DocumentsPage } from './DocumentsPage';
 import * as useGetDocumentsModule from './hooks/useGetDocuments';
-import * as SyncProviderModule from '@/common/providers/SyncProvider';
+import * as useGetSyncStateModule from './hooks/useGetSyncState';
 
 // Mock the FileUploadDropZone component
 vi.mock('./components/file-upload-drop-zone/FileUploadDropZone', () => ({
   FileUploadDropZone: () => <div data-testid="file-upload-drop-zone" />,
 }));
 
-// Mock the useSyncContext hook
-vi.mock('@/common/providers/SyncProvider', async () => {
-  const actual = await vi.importActual<typeof SyncProviderModule>('@/common/providers/SyncProvider');
+// Mock the useGetSyncState hook
+vi.mock('./hooks/useGetSyncState', async () => {
+  const actual = await vi.importActual<typeof useGetSyncStateModule>('./hooks/useGetSyncState');
   return {
     ...actual,
-    useSyncContext: vi.fn(),
+    useGetSyncState: vi.fn(),
   };
 });
 
 describe('DocumentsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Setup default mock for useSyncContext
-    vi.mocked(SyncProviderModule.useSyncContext).mockReturnValue({
-      syncNeeded: false,
-      setSyncNeeded: vi.fn(),
+    // Setup default mock for useGetSyncState
+    vi.mocked(useGetSyncStateModule.useGetSyncState).mockReturnValue({
+      data: { syncNeeded: false },
+      isLoading: false,
+      error: null,
     } as never);
   });
 

@@ -92,6 +92,12 @@ export const SyncService = {
         '[SyncService] - startSync - received jobId from Bedrock',
       );
 
+      // If no pending documents, we need to set the sync needed flag to false since there's nothing to sync
+      if (pendingDocuments.length === 0) {
+        logger.info('[SyncService] - startSync - no PENDING documents, setting syncNeeded to false');
+        await DocumentRepository.setSyncNeeded(false);
+      }
+
       // Update all PENDING documents with the job ID and IN_PROGRESS status
       await Promise.all(
         pendingDocuments.map((doc) =>

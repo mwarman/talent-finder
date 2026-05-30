@@ -7,23 +7,15 @@ import { JSX } from 'react';
 import { useSyncDocument } from './useSyncDocument';
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/api-error';
-import * as SyncProviderModule from '@/common/providers/SyncProvider';
+import { SYNC_STATE_QUERY_KEY } from './useGetSyncState';
 
 // Mock dependencies
 vi.mock('sonner');
 vi.mock('@/common/utils/api-client');
-vi.mock('@/common/providers/SyncProvider', async () => {
-  const actual = await vi.importActual<typeof SyncProviderModule>('@/common/providers/SyncProvider');
-  return {
-    ...actual,
-    useSyncContext: vi.fn(),
-  };
-});
 
 describe('useSyncDocument', () => {
   let queryClient: QueryClient;
   let wrapper: React.ComponentType<{ children: JSX.Element }>;
-  let mockSetSyncNeeded: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     queryClient = new QueryClient();
@@ -31,14 +23,6 @@ describe('useSyncDocument', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
     vi.clearAllMocks();
-
-    mockSetSyncNeeded = vi.fn();
-
-    // Mock useSyncContext hook
-    vi.mocked(SyncProviderModule.useSyncContext).mockReturnValue({
-      syncNeeded: true,
-      setSyncNeeded: mockSetSyncNeeded,
-    } as never);
   });
 
   describe('happy path', () => {
@@ -89,8 +73,9 @@ describe('useSyncDocument', () => {
       expect(syncData).toEqual(mockResponse.data);
     });
 
-    it('should set syncNeeded to false on success', async () => {
+    it('should update sync-state cache to syncNeeded false on success', async () => {
       // Arrange
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
       const mockResponse = {
         data: {
           syncStatus: 'IN_PROGRESS',
@@ -109,7 +94,7 @@ describe('useSyncDocument', () => {
       });
 
       // Assert
-      expect(mockSetSyncNeeded).toHaveBeenCalledWith(false);
+      expect(setQueryDataSpy).toHaveBeenCalledWith(SYNC_STATE_QUERY_KEY, { syncNeeded: false });
     });
 
     it('should invalidate documents query on success', async () => {
@@ -210,7 +195,7 @@ describe('useSyncDocument', () => {
 
       // Assert
       expect(toast.success).toHaveBeenCalledWith('All documents are synced');
-      expect(mockSetSyncNeeded).toHaveBeenCalledWith(false);
+      expect(queryClient.getQueryData(SYNC_STATE_QUERY_KEY)).toEqual({ syncNeeded: false });
       expect(invalidateQuerySpy).toHaveBeenCalledWith({
         queryKey: ['documents'],
       });

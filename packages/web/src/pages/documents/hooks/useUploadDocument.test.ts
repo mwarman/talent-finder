@@ -4,7 +4,7 @@ import { ReactNode, createElement } from 'react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useUploadDocument } from './useUploadDocument';
 import * as apiClientModule from '@/common/utils/api-client';
-import * as SyncProviderModule from '@/common/providers/SyncProvider';
+import * as useSetSyncStateModule from './useSetSyncState';
 
 // Mock the API client
 vi.mock('@/common/utils/api-client', () => ({
@@ -13,12 +13,12 @@ vi.mock('@/common/utils/api-client', () => ({
   },
 }));
 
-// Mock SyncProvider
-vi.mock('@/common/providers/SyncProvider', async () => {
-  const actual = await vi.importActual<typeof SyncProviderModule>('@/common/providers/SyncProvider');
+// Mock useSetSyncState
+vi.mock('./useSetSyncState', async () => {
+  const actual = await vi.importActual<typeof useSetSyncStateModule>('./useSetSyncState');
   return {
     ...actual,
-    useSyncContext: vi.fn(),
+    useSetSyncState: vi.fn(),
   };
 });
 
@@ -35,7 +35,7 @@ vi.mock('axios', () => {
 });
 
 import axios from 'axios';
-import { useSyncContext } from '@/common/providers/SyncProvider';
+import { useSetSyncState } from './useSetSyncState';
 
 interface AxiosUploadConfig {
   headers: Record<string, string>;
@@ -52,7 +52,7 @@ describe('useUploadDocument', () => {
   let queryClient: QueryClient;
   const mockApiClient = apiClientModule.apiClient as unknown as MockApiClient;
   const mockAxios = axios as ReturnType<typeof vi.fn>;
-  const mockSetSyncNeeded = vi.fn();
+  const mockSetSyncState = vi.fn();
 
   const createWrapper = () => {
     return ({ children }: { children: ReactNode }) =>
@@ -68,10 +68,9 @@ describe('useUploadDocument', () => {
     });
     vi.clearAllMocks();
 
-    // Mock useSyncContext
-    (useSyncContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      setSyncNeeded: mockSetSyncNeeded,
-      syncNeeded: false,
+    // Mock useSetSyncState
+    (useSetSyncState as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: mockSetSyncState,
     });
 
     // Mock successful presigned URL response
@@ -193,6 +192,8 @@ describe('useUploadDocument', () => {
         filename: 'document.pdf',
         contentType: 'application/pdf',
       });
+
+      expect(mockSetSyncState).toHaveBeenCalledWith({ syncNeeded: true });
 
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: ['documents'],

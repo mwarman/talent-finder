@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { apiClient } from '@/common/utils/api-client';
-import { useSyncContext } from '@/common/providers/SyncProvider';
+import { useSetSyncState } from './useSetSyncState';
 
 interface UploadFile {
   file: File;
@@ -40,7 +40,7 @@ const ALLOWED_TYPES = ['application/pdf', 'text/plain'];
  */
 export const useUploadDocument = (): UseUploadDocumentReturn => {
   const queryClient = useQueryClient();
-  const { setSyncNeeded } = useSyncContext();
+  const { mutate: setSyncState } = useSetSyncState();
   const [uploadQueue, setUploadQueue] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string>();
@@ -140,7 +140,7 @@ export const useUploadDocument = (): UseUploadDocumentReturn => {
         );
 
         // Mark that a new document has been uploaded, so sync is needed
-        setSyncNeeded(true);
+        setSyncState({ syncNeeded: true });
         // Invalidate the documents query to fetch the newly uploaded document
         await queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY });
       } catch (err) {
@@ -150,7 +150,7 @@ export const useUploadDocument = (): UseUploadDocumentReturn => {
         );
       }
     },
-    [getPresignedUrl, uploadToS3, queryClient, setSyncNeeded],
+    [getPresignedUrl, uploadToS3, queryClient, setSyncState],
   );
 
   /**

@@ -4,8 +4,8 @@ import { toast } from 'sonner';
 
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/api-error';
-import { useSyncContext } from '@/common/providers/SyncProvider';
 import { DOCUMENTS_QUERY_KEY } from './useGetDocuments';
+import { SYNC_STATE_QUERY_KEY } from './useGetSyncState';
 
 interface SyncResponse {
   syncStatus: SyncStatus;
@@ -24,7 +24,6 @@ interface SyncResponse {
  */
 export const useSyncDocument = () => {
   const queryClient = useQueryClient();
-  const { setSyncNeeded } = useSyncContext();
 
   return useMutation<SyncResponse, ApiError, void>({
     mutationFn: async () => {
@@ -32,8 +31,8 @@ export const useSyncDocument = () => {
       return response.data;
     },
     onSuccess: () => {
-      // Mark sync as no longer needed after successful sync
-      setSyncNeeded(false);
+      // Optimistically mark sync as no longer needed after successful sync
+      queryClient.setQueryData<{ syncNeeded: boolean }>(SYNC_STATE_QUERY_KEY, { syncNeeded: false });
       // Invalidate documents query to trigger refetch
       queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY });
     },
@@ -41,8 +40,8 @@ export const useSyncDocument = () => {
       // Handle 409 Conflict: no documents to sync
       if (error.statusCode === 409) {
         toast.success('All documents are synced');
-        // Mark sync as no longer needed
-        setSyncNeeded(false);
+        // Optimistically mark sync as no longer needed
+        queryClient.setQueryData<{ syncNeeded: boolean }>(SYNC_STATE_QUERY_KEY, { syncNeeded: false });
         // Invalidate documents query to trigger refetch
         queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY });
       } else {

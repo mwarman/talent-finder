@@ -19,6 +19,7 @@ vi.mock('../repositories/document-repository', () => ({
   DocumentRepository: {
     listByStatus: vi.fn(),
     listByJobId: vi.fn(),
+    setSyncNeeded: vi.fn(),
     updateSyncStatus: vi.fn(),
   },
 }));
@@ -75,6 +76,7 @@ describe('SyncService', () => {
       // Arrange
       const jobId = 'job-456';
       vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([]);
+      vi.mocked(DocumentRepository.setSyncNeeded).mockResolvedValueOnce(undefined);
       vi.mocked(bedrockClient.send).mockResolvedValueOnce({
         ingestionJob: { ingestionJobId: jobId },
       });

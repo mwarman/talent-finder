@@ -4,15 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
 import { DocumentsPageHeader } from './DocumentsPageHeader';
-import { SyncProvider } from '@/common/providers/SyncProvider';
-import * as SyncProviderModule from '@/common/providers/SyncProvider';
+import * as useGetSyncStateModule from '../../hooks/useGetSyncState';
 
-// Mock the useSyncContext hook
-vi.mock('@/common/providers/SyncProvider', async () => {
-  const actual = await vi.importActual<typeof SyncProviderModule>('@/common/providers/SyncProvider');
+// Mock the useGetSyncState hook
+vi.mock('../../hooks/useGetSyncState', async () => {
+  const actual = await vi.importActual<typeof useGetSyncStateModule>('../../hooks/useGetSyncState');
   return {
     ...actual,
-    useSyncContext: vi.fn(),
+    useGetSyncState: vi.fn(),
   };
 });
 
@@ -24,25 +23,22 @@ describe('DocumentsPageHeader', () => {
     queryClient = new QueryClient();
   });
 
-  const setupSyncContextMock = (syncNeeded = true) => {
-    vi.mocked(SyncProviderModule.useSyncContext).mockReturnValue({
-      syncNeeded,
-      setSyncNeeded: vi.fn(),
+  const setupSyncStateMock = (syncNeeded = true) => {
+    vi.mocked(useGetSyncStateModule.useGetSyncState).mockReturnValue({
+      data: { syncNeeded },
+      isLoading: false,
+      error: null,
     } as never);
   };
 
   const renderWithProviders = (ui: React.ReactElement) => {
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <SyncProvider>{ui}</SyncProvider>
-      </QueryClientProvider>,
-    );
+    return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
   };
 
   describe('happy path', () => {
     it('should render the header', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -53,7 +49,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should render the page title', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -64,7 +60,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should render the page description', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -75,7 +71,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should render the sync button', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -86,7 +82,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should render sync button enabled when syncNeeded is true', () => {
       // Arrange
-      setupSyncContextMock(true);
+      setupSyncStateMock(true);
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -98,7 +94,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should render sync button disabled when syncNeeded is false', () => {
       // Arrange
-      setupSyncContextMock(false);
+      setupSyncStateMock(false);
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -110,7 +106,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should use default testId when not provided', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -121,7 +117,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should use custom testId when provided', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader testId="custom-header" />);
@@ -134,7 +130,7 @@ describe('DocumentsPageHeader', () => {
   describe('accessibility', () => {
     it('should have proper heading hierarchy with level 1', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
@@ -146,7 +142,7 @@ describe('DocumentsPageHeader', () => {
 
     it('should have proper layout with title and sync button', () => {
       // Arrange
-      setupSyncContextMock();
+      setupSyncStateMock();
 
       // Act
       renderWithProviders(<DocumentsPageHeader />);
