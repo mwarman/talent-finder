@@ -4,6 +4,7 @@ import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 vi.mock('../repositories/document-repository', () => ({
   DocumentRepository: {
     listByStatus: vi.fn(),
+    setSyncNeeded: vi.fn(),
   },
 }));
 
@@ -100,6 +101,8 @@ describe('sync-status handler', () => {
     const body = JSON.parse(result.body || '{}');
     expect(body.syncStatus).toBe(SyncStatus.COMPLETED);
     expect(body.updatedAt).toBe(updatedAt);
+    expect(DocumentRepository.setSyncNeeded).toHaveBeenCalledOnce();
+    expect(DocumentRepository.setSyncNeeded).toHaveBeenCalledWith(false);
   });
 
   it('should call SyncService.pollStatus with the bedrockSyncJobId from the active document', async () => {
@@ -229,5 +232,98 @@ describe('sync-status handler', () => {
     const body = JSON.parse(result.body || '{}');
     expect(body.error).toBe('Internal Server Error');
     expect(body.message).toBe('DynamoDB failure');
+  });
+
+  it('should NOT call setSyncNeeded when syncStatus is not COMPLETED', async () => {
+    // Arrange
+    const jobId = 'job-456';
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        bedrockSyncJobId: jobId,
+      },
+    ] as never);
+
+    vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
+      syncStatus: SyncStatus.FAILED,
+      updatedAt: new Date().toISOString(),
+      syncError: 'Permission denied',
+    });
+
+    // Act
+    await handle(event, context);
+
+    // Assert
+    expect(DocumentRepository.setSyncNeeded).not.toHaveBeenCalled();
+  });
+
+  it('should NOT call setSyncNeeded when syncStatus is IN_PROGRESS', async () => {
+    // Arrange
+    const jobId = 'job-789';
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        bedrockSyncJobId: jobId,
+      },
+    ] as never);
+
+    vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
+      syncStatus: SyncStatus.IN_PROGRESS,
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Act
+    await handle(event, context);
+
+    // Assert
+    expect(DocumentRepository.setSyncNeeded).not.toHaveBeenCalled();
+  });
+
+  it('should not return 500 when setSyncNeeded fails after COMPLETED status', async () => {
+    // Arrange
+    const jobId = 'job-456';
+    const updatedAt = new Date().toISOString();
+    const event = makeEvent();
+    const context = makeContext();
+
+    vi.mocked(DocumentRepository.listByStatus).mockResolvedValueOnce([
+      {
+        documentId: 'doc-1',
+        filename: 'resume.pdf',
+        uploadedAt: new Date().toISOString(),
+        contentType: 'application/pdf',
+        syncStatus: SyncStatus.IN_PROGRESS,
+        bedrockSyncJobId: jobId,
+      },
+    ] as never);
+
+    vi.mocked(SyncService.pollStatus).mockResolvedValueOnce({
+      syncStatus: SyncStatus.COMPLETED,
+      updatedAt,
+    });
+
+    vi.mocked(DocumentRepository.setSyncNeeded).mockRejectedValueOnce(new Error('DynamoDB error'));
+
+    // Act
+    const result = await handle(event, context);
+
+    // Assert — handler must still return 200; setSyncNeeded failure must not bubble up
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body || '{}');
+    expect(body.syncStatus).toBe(SyncStatus.COMPLETED);
   });
 });

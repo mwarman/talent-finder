@@ -1,15 +1,44 @@
-import { DeleteCommand, GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 import { config } from '../utils/config';
 import { dynamoClient } from '../utils/dynamo-client';
 import { logger } from '../utils/logger';
-import type { Document, SyncStatus } from '@talent-finder/shared';
+import type { Document, KnowledgeBase, SyncStatus } from '@talent-finder/shared';
 
 /**
  * CreateDocumentInput represents the fields required to create a new document record.
  * Excludes sizeBytes as it is unknown at presigned URL generation time.
  */
 export type CreateDocumentInput = Omit<Document, 'sizeBytes'>;
+
+/** DocumentItem represents the raw DynamoDB item shape, including composite key attributes. */
+interface DocumentItem extends Document {
+  pk: string;
+  sk: string;
+}
+
+/** Composite key builders for the Documents DynamoDB table and its GSIs. */
+export const DocumentsTableKeys = {
+  pk: (kbId: string) => `KB#${kbId}`,
+  sk: {
+    document: (documentId: string) => `DOCUMENT#${documentId}`,
+    syncState: 'SYNC_STATE' as const,
+  },
+  gsi: {
+    syncStatusIndex: {
+      pk: (kbId: string) => `KB#${kbId}`,
+    },
+    bedrockSyncJobIdIndex: {
+      pk: (bedrockSyncJobId: string) => bedrockSyncJobId,
+    },
+  },
+} as const;
+
+/** Strips DynamoDB composite key attributes from a raw item to produce a clean Document. */
+const toDocument = (item: DocumentItem): Document => {
+  const { pk: _pk, sk: _sk, ...document } = item;
+  return document;
+};
 
 /**
  * DocumentRepository provides data access methods for document metadata storage in DynamoDB.
@@ -26,7 +55,11 @@ export const DocumentRepository = {
     try {
       const command = new PutCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
-        Item: doc,
+        Item: {
+          pk: DocumentsTableKeys.pk(config.BEDROCK_KB_ID),
+          sk: DocumentsTableKeys.sk.document(doc.documentId),
+          ...doc,
+        },
       });
       await dynamoClient.send(command);
       logger.debug({ documentId: doc.documentId }, '[DocumentRepository] < create - document created successfully');
@@ -47,10 +80,10 @@ export const DocumentRepository = {
     try {
       const command = new GetCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
-        Key: { documentId },
+        Key: { pk: DocumentsTableKeys.pk(config.BEDROCK_KB_ID), sk: DocumentsTableKeys.sk.document(documentId) },
       });
       const response = await dynamoClient.send(command);
-      const document = response.Item as Document | undefined;
+      const document = response.Item ? toDocument(response.Item as DocumentItem) : undefined;
       logger.debug({ documentId }, '[DocumentRepository] < getById - document retrieved');
       return document;
     } catch (error) {
@@ -67,11 +100,16 @@ export const DocumentRepository = {
   list: async (): Promise<Document[]> => {
     logger.debug('[DocumentRepository] > list');
     try {
-      const command = new ScanCommand({
+      const command = new QueryCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
+        KeyConditionExpression: 'pk = :pk AND begins_with(sk, :prefix)',
+        ExpressionAttributeValues: {
+          ':pk': DocumentsTableKeys.pk(config.BEDROCK_KB_ID),
+          ':prefix': 'DOCUMENT#',
+        },
       });
       const response = await dynamoClient.send(command);
-      const documents = (response.Items || []) as Document[];
+      const documents = (response.Items || []).map((item) => toDocument(item as DocumentItem));
       // Sort by uploadedAt in descending order (most recent first)
       const sorted = documents.sort((a, b) => {
         const dateA = new Date(a.uploadedAt).getTime();
@@ -95,13 +133,17 @@ export const DocumentRepository = {
   listByStatus: async (status: SyncStatus): Promise<Document[]> => {
     logger.debug({ status }, '[DocumentRepository] > listByStatus');
     try {
-      const command = new ScanCommand({
+      const command = new QueryCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
-        FilterExpression: 'syncStatus = :status',
-        ExpressionAttributeValues: { ':status': status },
+        IndexName: 'syncStatus-index',
+        KeyConditionExpression: 'pk = :pk AND syncStatus = :status',
+        ExpressionAttributeValues: {
+          ':pk': DocumentsTableKeys.pk(config.BEDROCK_KB_ID),
+          ':status': status,
+        },
       });
       const response = await dynamoClient.send(command);
-      const documents = (response.Items || []) as Document[];
+      const documents = (response.Items || []).map((item) => toDocument(item as DocumentItem));
       logger.debug({ status, count: documents.length }, '[DocumentRepository] < listByStatus - documents retrieved');
       return documents;
     } catch (error) {
@@ -119,13 +161,14 @@ export const DocumentRepository = {
   listByJobId: async (bedrockSyncJobId: string): Promise<Document[]> => {
     logger.debug({ bedrockSyncJobId }, '[DocumentRepository] > listByJobId');
     try {
-      const command = new ScanCommand({
+      const command = new QueryCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
-        FilterExpression: 'bedrockSyncJobId = :jobId',
+        IndexName: 'bedrockSyncJobId-index',
+        KeyConditionExpression: 'bedrockSyncJobId = :jobId',
         ExpressionAttributeValues: { ':jobId': bedrockSyncJobId },
       });
       const response = await dynamoClient.send(command);
-      const documents = (response.Items || []) as Document[];
+      const documents = (response.Items || []).map((item) => toDocument(item as DocumentItem));
       logger.debug(
         { bedrockSyncJobId, count: documents.length },
         '[DocumentRepository] < listByJobId - documents retrieved',
@@ -173,7 +216,7 @@ export const DocumentRepository = {
 
       const command = new UpdateCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
-        Key: { documentId },
+        Key: { pk: DocumentsTableKeys.pk(config.BEDROCK_KB_ID), sk: DocumentsTableKeys.sk.document(documentId) },
         UpdateExpression: `SET ${updateExpressionParts.join(', ')}`,
         ExpressionAttributeValues: expressionAttributeValues,
       });
@@ -199,12 +242,67 @@ export const DocumentRepository = {
     try {
       const command = new DeleteCommand({
         TableName: config.DOCUMENTS_TABLE_NAME,
-        Key: { documentId },
+        Key: { pk: DocumentsTableKeys.pk(config.BEDROCK_KB_ID), sk: DocumentsTableKeys.sk.document(documentId) },
       });
       await dynamoClient.send(command);
       logger.debug({ documentId }, '[DocumentRepository] < deleteById - document deleted successfully');
     } catch (error) {
       logger.error({ error, documentId }, '[DocumentRepository] < deleteById - failed to delete document');
+      throw error;
+    }
+  },
+
+  /**
+   * Retrieves the sync state record for the current knowledge base.
+   * @returns The KnowledgeBase record if the SYNC_STATE item exists, or undefined if not found
+   * @throws Error if the DynamoDB get operation fails
+   */
+  getSyncState: async (): Promise<KnowledgeBase | undefined> => {
+    logger.debug('[DocumentRepository] > getSyncState');
+    try {
+      const command = new GetCommand({
+        TableName: config.DOCUMENTS_TABLE_NAME,
+        Key: { pk: DocumentsTableKeys.pk(config.BEDROCK_KB_ID), sk: DocumentsTableKeys.sk.syncState },
+      });
+      const response = await dynamoClient.send(command);
+      if (!response.Item) {
+        logger.debug('[DocumentRepository] < getSyncState - no sync state item found');
+        return undefined;
+      }
+      const knowledgeBase: KnowledgeBase = {
+        knowledgeBaseId: config.BEDROCK_KB_ID,
+        syncNeeded: response.Item.syncNeeded as boolean,
+      };
+      logger.debug(
+        { syncNeeded: knowledgeBase.syncNeeded },
+        '[DocumentRepository] < getSyncState - sync state retrieved',
+      );
+      return knowledgeBase;
+    } catch (error) {
+      logger.error({ error }, '[DocumentRepository] < getSyncState - failed to retrieve sync state');
+      throw error;
+    }
+  },
+
+  /**
+   * Upserts the syncNeeded flag on the SYNC_STATE item for the current knowledge base.
+   * Creates the item if it does not yet exist.
+   * @param syncNeeded - Whether a Bedrock knowledge base sync is required
+   * @throws Error if the DynamoDB update operation fails
+   */
+  setSyncNeeded: async (syncNeeded: boolean): Promise<void> => {
+    logger.debug({ syncNeeded }, '[DocumentRepository] > setSyncNeeded');
+    try {
+      const command = new UpdateCommand({
+        TableName: config.DOCUMENTS_TABLE_NAME,
+        Key: { pk: DocumentsTableKeys.pk(config.BEDROCK_KB_ID), sk: DocumentsTableKeys.sk.syncState },
+        UpdateExpression: 'SET syncNeeded = :syncNeeded',
+        ExpressionAttributeValues: { ':syncNeeded': syncNeeded },
+      });
+      await dynamoClient.send(command);
+      logger.debug({ syncNeeded }, '[DocumentRepository] < setSyncNeeded - sync needed flag updated');
+    } catch (error) {
+      logger.error({ error, syncNeeded }, '[DocumentRepository] < setSyncNeeded - failed to update sync needed flag');
       throw error;
     }
   },

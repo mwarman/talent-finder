@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { BackendStack } from './backend-stack';
 
 describe('BackendStack', () => {
@@ -199,7 +199,7 @@ describe('BackendStack', () => {
     expect(talentFinderStack).toBeDefined();
   });
 
-  it('should create DynamoDB table for document metadata', () => {
+  it('should create DynamoDB table with composite key schema for single-table design', () => {
     // Arrange
     const tags = {
       App: 'talent-finder',
@@ -208,24 +208,31 @@ describe('BackendStack', () => {
       Owner: 'team-backend',
     };
 
-    // Act & Assert — Stack instantiation succeeds with DynamoDB configuration
-    expect(() => {
-      new BackendStack(parentStack, 'BackendStack', {
-        tags,
-        appName: 'talent-finder',
-        envName: 'dev',
-        logLevel: 'debug',
-        logFormat: 'json',
-        logEnabled: 'true',
-        cloudFrontUrl: '*',
-        pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+    // Act
+    const stack = new BackendStack(parentStack, 'BackendStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
 
-        pineconeApiKey: 'test-pinecone-api-key',
-        bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
-        bedrockRetrieveTopK: 5,
-        bedrockMaxTokens: 1500,
-      });
-    }).not.toThrow();
+      pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
+    });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      KeySchema: [
+        { AttributeName: 'pk', KeyType: 'HASH' },
+        { AttributeName: 'sk', KeyType: 'RANGE' },
+      ],
+    });
   });
 
   it('should expose knowledgeBaseId and dataSourceId as public properties', () => {
@@ -442,5 +449,146 @@ describe('BackendStack', () => {
 
     // Assert — stack must be defined and the API endpoint must exist (GET /sync-status route is wired)
     expect(talentFinderStack).toBeDefined();
+  });
+
+  it('should configure syncStatus-index GSI on the documents table', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const stack = new BackendStack(parentStack, 'BackendStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
+    });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({
+          IndexName: 'syncStatus-index',
+          KeySchema: [
+            { AttributeName: 'pk', KeyType: 'HASH' },
+            { AttributeName: 'syncStatus', KeyType: 'RANGE' },
+          ],
+        }),
+      ]),
+    });
+  });
+
+  it('should configure bedrockSyncJobId-index GSI on the documents table', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const stack = new BackendStack(parentStack, 'BackendStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
+    });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({
+          IndexName: 'bedrockSyncJobId-index',
+          KeySchema: [{ AttributeName: 'bedrockSyncJobId', KeyType: 'HASH' }],
+        }),
+      ]),
+    });
+  });
+
+  it('should create sync state get Lambda wired to GET /sync-state', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const stack = new BackendStack(parentStack, 'BackendStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
+    });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+      RouteKey: 'GET /sync-state',
+    });
+  });
+
+  it('should create sync state set Lambda wired to PUT /sync-state', () => {
+    // Arrange
+    const tags = {
+      App: 'talent-finder',
+      Env: 'dev',
+      OU: 'engineering',
+      Owner: 'team-backend',
+    };
+
+    // Act
+    const stack = new BackendStack(parentStack, 'BackendStack', {
+      tags,
+      appName: 'talent-finder',
+      envName: 'dev',
+      logLevel: 'debug',
+      logFormat: 'json',
+      logEnabled: 'true',
+      cloudFrontUrl: '*',
+      pineconeIndexHost: 'https://test-index.svc.pinecone.io',
+      pineconeApiKey: 'test-pinecone-api-key',
+      bedrockModelId: 'us.anthropic.claude-sonnet-4-6',
+      bedrockRetrieveTopK: 5,
+      bedrockMaxTokens: 1500,
+    });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+      RouteKey: 'PUT /sync-state',
+    });
   });
 });
