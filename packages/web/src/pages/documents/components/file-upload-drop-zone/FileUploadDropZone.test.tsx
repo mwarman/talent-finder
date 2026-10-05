@@ -190,7 +190,7 @@ describe('FileUploadDropZone', () => {
         clearError: vi.fn(),
         removeFromQueue: vi.fn(),
         clearCompleted: vi.fn(),
-      } as UseUploadDocumentReturn);
+      } as MockUseUploadDocumentReturn);
 
       render(<FileUploadDropZone />, { wrapper: createWrapper() });
 
@@ -210,7 +210,7 @@ describe('FileUploadDropZone', () => {
         clearError: mockClearError,
         removeFromQueue: vi.fn(),
         clearCompleted: vi.fn(),
-      } as UseUploadDocumentReturn);
+      } as MockUseUploadDocumentReturn);
 
       render(<FileUploadDropZone />, { wrapper: createWrapper() });
 
@@ -396,7 +396,7 @@ describe('FileUploadDropZone', () => {
         clearError: vi.fn(),
         removeFromQueue: vi.fn(),
         clearCompleted: vi.fn(),
-      } as UseUploadDocumentReturn);
+      } as MockUseUploadDocumentReturn);
 
       render(<FileUploadDropZone />, { wrapper: createWrapper() });
 
@@ -429,7 +429,7 @@ describe('FileUploadDropZone', () => {
         clearError: vi.fn(),
         removeFromQueue: vi.fn(),
         clearCompleted: mockClearCompleted,
-      } as UseUploadDocumentReturn);
+      } as MockUseUploadDocumentReturn);
 
       render(<FileUploadDropZone />, { wrapper: createWrapper() });
 
