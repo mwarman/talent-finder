@@ -1,1 +1,7 @@
+# Ignore files and directories for Prettier formatting
+
+# GitHub configuration files
 .github/CODEOWNERS
+
+# shadcn files
+**/components/shadcn/**
