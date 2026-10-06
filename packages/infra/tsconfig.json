@@ -1,3 +1,7 @@
+/**
+ * TypeScript configuration for the Infra package.
+ * Extends the base configuration with Infra-specific settings.
+ */
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {

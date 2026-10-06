@@ -1,3 +1,7 @@
+/**
+ * TypeScript configuration for the Shared package.
+ * Extends the base configuration with Shared-specific settings.
+ */
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
