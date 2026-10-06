@@ -14,7 +14,7 @@ export default mergeConfig(
     plugins: [react()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
     test: {
