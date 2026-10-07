@@ -9,5 +9,8 @@
     "clean": "rimraf coverage dist",
     "test": "vitest run --silent passed-only",
     "test:coverage": "vitest run --coverage --silent passed-only"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
   }
 }

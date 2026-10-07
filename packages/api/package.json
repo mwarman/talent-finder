@@ -20,9 +20,11 @@
     "@aws-sdk/s3-request-presigner": "3.1147.0",
     "@talent-finder/shared": "*",
     "pino": "10.4.0",
-    "pino-lambda": "4.4.1"
+    "pino-lambda": "4.4.1",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/aws-lambda": "8.10.164"
+    "@types/aws-lambda": "8.10.164",
+    "@types/node": "26.6.4"
   }
 }
