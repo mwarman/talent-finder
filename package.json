@@ -1,6 +1,6 @@
 {
   "name": "talent-finder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A RAG AI application to find specific skill matches from a pool of candidates resumes, CVs, and other documents.",

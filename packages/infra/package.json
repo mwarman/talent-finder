@@ -1,6 +1,6 @@
 {
   "name": "@talent-finder/infra",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -12,15 +12,15 @@
     "precdk:synth": "npm run build",
     "cdk:synth": "cdk synth",
     "clean": "rimraf cdk.out coverage dist",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test": "vitest run --silent passed-only",
+    "test:coverage": "vitest run --coverage --silent passed-only"
   },
   "dependencies": {},
   "devDependencies": {
     "aws-cdk": "2.1144.0",
     "aws-cdk-lib": "2.272.0",
     "constructs": "10.8.1",
-    "dotenv": "18.0.5",
+    "dotenv": "18.0.6",
     "esbuild": "0.28.2"
   }
 }
