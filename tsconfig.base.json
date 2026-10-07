@@ -1,3 +1,7 @@
+/**
+ * Base TypeScript configuration for the project.
+ * This configuration is extended by package-specific tsconfig files.
+ */
 {
   "compilerOptions": {
     "target": "ES2022",

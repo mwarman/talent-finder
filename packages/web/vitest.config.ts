@@ -2,7 +2,7 @@ import { defineConfig, mergeConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-import baseConfig from '../../vitest.config';
+import baseConfig from '../../vitest.config.ts';
 
 /**
  * Vitest configuration for the Web package.
@@ -14,7 +14,7 @@ export default mergeConfig(
     plugins: [react()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
     test: {

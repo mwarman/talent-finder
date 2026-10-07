@@ -108,7 +108,7 @@ Lambdas are chosen for their event-driven, pay-per-execution model, automatic sc
 
 ## Prerequisites
 
-- Node.js >= 24.15.0 < 25
+- Node.js >= 24.21.0 < 25
 - AWS CLI configured with appropriate credentials
 - AWS account with permissions to create S3, Secrets Manager, CloudWatch, and Lambda resources
 

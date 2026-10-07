@@ -102,8 +102,8 @@ graph TD
 
 Before you begin, ensure you have the following installed on your machine:
 
-- **Node.js** v24.15.0 or higher (v25 not supported)
-- **npm** v10.0.0 or higher
+- **Node.js** v24.21.0 or higher (v25 not supported)
+- **npm** v11.19.0 or higher
 - **Git** for version control
 
 ### Managing Node Versions with `nvm`
@@ -139,8 +139,8 @@ Use [nvm-windows](https://github.com/coreybutler/nvm-windows/releases) (standalo
 
 3. **Verify the correct version is active:**
    ```bash
-   node --version  # Should output v24.15.0
-   npm --version   # Should output v10.0.0 or higher
+   node --version  # Should output v24.21.0
+   npm --version   # Should output v11.19.0
    ```
 
 **Tip:** The project includes a `.nvmrc` file in the root directory. If you have `nvm` installed, simply run `nvm use` from the project root to automatically switch to the correct Node version.
@@ -179,9 +179,10 @@ Use [nvm-windows](https://github.com/coreybutler/nvm-windows/releases) (standalo
 To verify that everything is set up correctly, run the linter and tests:
 
 ```bash
+npm run format:check  # Check code formatting
 npm run lint          # Check code quality
+npm run build         # Build all project components
 npm run test          # Run all tests across workspaces
-npm run test:coverage # Generate coverage reports
 ```
 
 ## Available Scripts

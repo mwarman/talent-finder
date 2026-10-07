@@ -1,7 +1,7 @@
 import { JSX, ReactNode } from 'react';
 import { default as MarkdownToJsx } from 'markdown-to-jsx';
 
-import { cn } from '@/common/utils/css';
+import { cn } from 'cn';
 
 /**
  * Props for the Markdown component.
