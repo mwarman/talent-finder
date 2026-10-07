@@ -1,7 +1,29 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
+import type { Construct } from 'constructs';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { BackendStack } from './backend-stack';
+
+vi.mock('aws-cdk-lib/aws-lambda-nodejs', async () => {
+  const actual = await vi.importActual<typeof import('aws-cdk-lib/aws-lambda-nodejs')>('aws-cdk-lib/aws-lambda-nodejs');
+  const cdkLambda = await vi.importActual<typeof import('aws-cdk-lib/aws-lambda')>('aws-cdk-lib/aws-lambda');
+
+  return {
+    ...actual,
+    NodejsFunction: class extends cdkLambda.Function {
+      constructor(scope: Construct, id: string, props: ConstructorParameters<typeof actual.NodejsFunction>[2]) {
+        super(scope, id, {
+          // Fallbacks prevent "missing property" errors from the base class
+          runtime: props?.runtime || cdkLambda.Runtime.NODEJS_20_X,
+          handler: props?.handler || 'index.handler',
+          ...props,
+          // Replaces esbuild asset generation with a zero-cost inline placeholder
+          code: cdkLambda.Code.fromInline('exports.handler = async () => {}'),
+        });
+      }
+    },
+  };
+});
 
 describe('BackendStack', () => {
   let parentStack: Stack;
