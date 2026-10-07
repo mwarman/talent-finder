@@ -145,12 +145,16 @@ You are authorized to execute the following shell commands to validate your work
 
 ### Frontend React Component Layout (`packages/web`)
 
-- Write components as **Arrow Functions** using explicit functional component patterns (`const MyComponent: React.FC<Props> = ...`).
-- Always use **Default Exports** for page components and standard UI components.
-- Enforce code splitting by leveraging route-level `lazy()` and `Suspense` operations in routing definitions.
-- **Component Testing Hooks:** Always inject a `data-testid` attribute or accept a `testId` prop on components to ensure reliable test selection. The `testId` prop must default to the component's name written in `kebab-case`.
-- **Styling & UI Systems (shadcn/ui & Tailwind):** Use **Tailwind CSS** classes natively. Apply thematic alterations through CSS variables via `packages/web/src/index.css`. Use `class-variance-authority` (CVA) within `packages/web/src/common/utils/css.ts` when handling multi-variant components.
-- **shadcn Rule:** Never modify underlying code files inside `packages/web/src/common/components/shadcn/` by hand. If behavior adjustments are required, write a wrapper component around them. Scaffold new ones using the authorized CLI command.
+- Functional components written as arrow functions with explicitly typed props interfaces. React 19.
+- **Named exports** for components, hooks, and utilities. Do not use default exports.
+- **Test IDs:** Components accept an optional `testId` prop that defaults to the component name in kebab-case and is applied as `data-testid` on the root element (e.g., `PhaseBadge` → `phase-badge`).
+- Use TanStack Query for server state, wrapped in hooks under `hooks/`. Use Axios via `utils/api-client.ts`. Parse API responses with the shared Zod schemas before use.
+- Use `useState` and context (`context/`) for local state. Do not introduce Redux-style state libraries.
+- **Styling:** Tailwind utility classes; semantic colors are OKLch CSS variables in `globals.css`. Use `class-variance-authority` for multi-variant components and the `cn` helper to merge class names.
+- **shadcn/ui:** Never hand-edit files in `src/components/shadcn/` (also excluded from ESLint). Add components with the CLI command in Section 3, and wrap them for custom behavior.
+- Import internal modules with the `@/*` alias (maps to `src/*`).
+- Use semantic HTML, keyboard-accessible controls, and `aria-*` attributes. Prefer Radix primitives for interactive widgets.
+- Lazy-load routes with `React.lazy` and `Suspense`. Keep the initial bundle small and justify new dependencies.
 
 ### Backend API & AWS Lambda Standards (`packages/api`)
 
